@@ -1,16 +1,9 @@
 [gd_scene format=3]
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_platform"]
-size = Vector2(64, 8)
+[ext_resource type="Script" path="res://levels/blocks/platform.gd" id="1_script"]
 
 [node name="Platform" type="StaticBody2D"]
-
-[node name="Placeholder" type="ColorRect" parent="."]
-offset_left = -32.0
-offset_top = -4.0
-offset_right = 32.0
-offset_bottom = 4.0
-color = Color(0.45, 0.5, 0.65, 1)
+script = ExtResource("1_script")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("RectangleShape2D_platform")
+one_way_collision = true

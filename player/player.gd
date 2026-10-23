@@ -25,6 +25,8 @@ extends CharacterBody2D
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
 
+@onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
+
 
 func _physics_process(delta: float) -> void:
 	var direction: float = Input.get_axis("move_left", "move_right")
@@ -38,6 +40,14 @@ func _physics_process(delta: float) -> void:
 
 	velocity.x = next_horizontal_speed(velocity.x, direction, delta, is_on_floor())
 	move_and_slide()
+	_update_animation(direction)
+
+
+## Which animation in dog_frames.tres fits the current movement.
+static func animation_for(current_velocity: Vector2, on_floor: bool) -> StringName:
+	if not on_floor:
+		return &"jump" if current_velocity.y < 0.0 else &"fall"
+	return &"run" if absf(current_velocity.x) > 10.0 else &"idle"
 
 
 func get_jump_velocity() -> float:
@@ -78,6 +88,14 @@ func next_horizontal_speed(current: float, direction: float, delta: float, on_fl
 		return move_toward(current, direction * run_speed, accel * delta)
 	var decel: float = ground_friction if on_floor else air_acceleration
 	return move_toward(current, 0.0, decel * delta)
+
+
+func _update_animation(direction: float) -> void:
+	if direction != 0.0:
+		_sprite.flip_h = direction < 0.0  # the sprite sheet faces right
+	var animation: StringName = animation_for(velocity, is_on_floor())
+	if _sprite.animation != animation:
+		_sprite.play(animation)
 
 
 func _jump() -> void:
