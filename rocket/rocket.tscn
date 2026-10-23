@@ -1,0 +1,47 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://rocket/rocket.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/art/rocket/rocket.png" id="2_rocket"]
+[ext_resource type="Texture2D" path="res://assets/art/rocket/flame.png" id="3_flame"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_flame0"]
+atlas = ExtResource("3_flame")
+region = Rect2(0, 0, 20, 34)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_flame1"]
+atlas = ExtResource("3_flame")
+region = Rect2(20, 0, 20, 34)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_flame2"]
+atlas = ExtResource("3_flame")
+region = Rect2(40, 0, 20, 34)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_flame"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_flame0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_flame1")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_flame2")
+}],
+"loop": true,
+"name": &"default",
+"speed": 12.0
+}]
+
+[node name="Rocket" type="Node2D"]
+script = ExtResource("1_script")
+
+[node name="Flame" type="AnimatedSprite2D" parent="."]
+visible = false
+position = Vector2(0, 17)
+sprite_frames = SubResource("SpriteFrames_flame")
+autoplay = "default"
+
+[node name="Body" type="Sprite2D" parent="."]
+position = Vector2(0, -51)
+texture = ExtResource("2_rocket")

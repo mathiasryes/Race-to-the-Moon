@@ -22,6 +22,8 @@
 ## Connections
 - Input actions `move_left`, `move_right`, `jump` (Project Settings → Input Map).
 - The `Camera2D` lives inside the player scene and follows them.
+- Visuals: `AnimatedSprite2D` with `dog_frames.tres` (see [[art-pipeline]]). Collision box is 14x12.
+- Platforms are one-way by default, so the player jumps up through them from below.
 - Platforms in [[game-design]] levels are spaced 48px apart vertically to fit the jump height.
 
 ## Related
