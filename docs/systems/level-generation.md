@@ -6,6 +6,7 @@
 ## What it does
 At startup the generator builds the whole climb from the ground to the moon:
 1. **Main route.** Steps upward one platform at a time. Each step rises 32 px up to 80% of the jump height, and the sideways gap is kept within what the dog can actually reach. So **every level is beatable**.
+   - The route **sweeps from side to side**. It heads for a target far out on one side (170-250 px from the centre), then the other side. Sometimes (15%) it stops in the middle first, but never twice in a row. Each step moves at least 60% of the reachable distance sideways. A full left-right-left sweep takes about 600 px of climbing, and a test checks every 600 px has platforms on both sides.
 2. **Side routes.** With `branch_chance` (45%) an extra platform appears beside the main one, also reachable from below. These give the player choices; some may be dead ends.
 3. **Regions by height.** Platform style, width and background props depend on the height:
 
@@ -36,6 +37,7 @@ Region boundaries, styles, widths and props are constants at the top of the scri
 - Obstacles per region (birds, satellites, asteroids, UFO): see the open question in [[game-design]].
 - Moving or crumbling platforms.
 - Background clouds can look like cloud platforms; may need a different look.
+- Launch-site platforms can overlap the launch tower and rocket in the background.
 
 ## Related
 [[rocket-race]] · [[player-movement]] · [[art-pipeline]] · [[0005-procedural-levels]]

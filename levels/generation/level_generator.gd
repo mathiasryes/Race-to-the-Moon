@@ -38,6 +38,13 @@ const RISE_FRACTION: float = 0.8
 ## Only this fraction of the possible horizontal reach is used, leaving room for imperfect jumps.
 const REACH_SAFETY: float = 0.75
 const TOP_PLATFORM_TILES: int = 6
+## Each step moves sideways by at least this fraction of the reachable distance (unless the target is closer).
+const MIN_SIDE_STEP: float = 0.6
+## The route heads for a target on the other side this far out from the centre...
+## (Must stay reachable for the widest platform, whose centre can't go past HALF_WIDTH - 48.)
+const SIDE_TARGET_RANGE: Vector2 = Vector2(170.0, 250.0)
+## ...or, with this chance, for a target near the middle.
+const MIDDLE_TARGET_CHANCE: float = 0.15
 
 @export var player: Player
 ## Moved onto the top platform.
@@ -106,7 +113,15 @@ static func generate_layout(rng: RandomNumberGenerator, height: float, jump: Jum
 	var max_rise: float = jump.height * RISE_FRACTION
 	var previous: Dictionary = {"x": 0.0, "y": 0.0, "width": 40}  # the floor
 	var y: float = 0.0
+	# The route sweeps from side to side; `last_side` is the side it most recently headed for.
+	var last_side: float = -1.0 if rng.randf() < 0.5 else 1.0
+	var target: float = next_target(rng, last_side, false)
 	while height + y > max_rise:
+		if absf(target - previous["x"]) < 24.0:
+			var was_middle: bool = absf(target) <= 60.0
+			if not was_middle:
+				last_side = signf(target)
+			target = next_target(rng, last_side, not was_middle)
 		var remaining: float = height + y
 		var rise: float = rng.randf_range(MIN_GAP_Y, minf(max_rise, remaining - MIN_GAP_Y))
 		y -= rise
@@ -114,7 +129,7 @@ static func generate_layout(rng: RandomNumberGenerator, height: float, jump: Jum
 		var width: int = rng.randi_range(REGION_WIDTHS[region].x, REGION_WIDTHS[region].y)
 		var styles: Array = REGION_STYLES[region]
 		var platform: Dictionary = {
-			"x": _pick_x(rng, previous, width, rise, jump), "y": y, "width": width,
+			"x": _pick_x(rng, previous, width, rise, jump, target), "y": y, "width": width,
 			"zone": styles[rng.randi() % styles.size()], "main": true,
 		}
 		layout.append(platform)
@@ -126,10 +141,17 @@ static func generate_layout(rng: RandomNumberGenerator, height: float, jump: Jum
 
 	var top_rise: float = height + y
 	layout.append({
-		"x": _pick_x(rng, previous, TOP_PLATFORM_TILES, top_rise, jump), "y": -height,
+		"x": _pick_x(rng, previous, TOP_PLATFORM_TILES, top_rise, jump, 0.0), "y": -height,
 		"width": TOP_PLATFORM_TILES, "zone": Platform.Zone.MOON, "main": true,
 	})
 	return layout
+
+
+## Where the route heads next: usually far out on the side opposite `last_side`, sometimes a stop in the middle.
+static func next_target(rng: RandomNumberGenerator, last_side: float, allow_middle: bool) -> float:
+	if allow_middle and rng.randf() < MIDDLE_TARGET_CHANCE:
+		return roundf(rng.randf_range(-60.0, 60.0))
+	return roundf(-last_side * rng.randf_range(SIDE_TARGET_RANGE.x, SIDE_TARGET_RANGE.y))
 
 
 ## Which Region a height (pixels above the ground) belongs to.
@@ -152,12 +174,14 @@ static func max_edge_gap(rise: float, jump: Jump) -> float:
 	return maxf(0.0, jump.run_speed * (air_time - speed_up_loss) * REACH_SAFETY)
 
 
-static func _pick_x(rng: RandomNumberGenerator, from: Dictionary, width: int, rise: float, jump: Jump) -> float:
+## Moves sideways from `from` towards `target` by a reachable amount.
+static func _pick_x(rng: RandomNumberGenerator, from: Dictionary, width: int, rise: float, jump: Jump, target: float) -> float:
 	var half: float = width * TILE / 2.0
+	var limit: float = HALF_WIDTH - half
 	var max_dx: float = max_edge_gap(rise, jump) + half + from["width"] * TILE / 2.0
-	var low: float = maxf(from["x"] - max_dx, -HALF_WIDTH + half)
-	var high: float = minf(from["x"] + max_dx, HALF_WIDTH - half)
-	return clampf(roundf(rng.randf_range(low, high)), -HALF_WIDTH + half, HALF_WIDTH - half)
+	var to_target: float = target - from["x"]
+	var step: float = minf(absf(to_target), rng.randf_range(MIN_SIDE_STEP, 1.0) * max_dx)
+	return clampf(roundf(from["x"] + signf(to_target) * step), -limit, limit)
 
 
 ## An optional extra platform beside `main`, also reachable from `from`. Empty if there's no room.

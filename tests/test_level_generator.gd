@@ -78,6 +78,61 @@ func test_same_seed_same_level() -> void:
 	assert_true(_layout(42) != _layout(43), "different seeds should give different levels")
 
 
+## A full left-right-left sweep takes roughly 600 px of climbing.
+func test_route_visits_both_sides_every_600_px() -> void:
+	var window: float = 600.0
+	for level_seed: int in range(1, 61):
+		var layout: Array[Dictionary] = _layout(level_seed)
+		var window_bottom: float = 0.0
+		while window_bottom < HEIGHT - window:
+			var left: bool = false
+			var right: bool = false
+			for platform: Dictionary in layout:
+				if -platform["y"] > window_bottom and -platform["y"] <= window_bottom + window:
+					left = left or platform["x"] < -80.0
+					right = right or platform["x"] > 80.0
+			assert_true(left and right, "seed %d: platforms between %.0f and %.0f px stay on one side" % [
+				level_seed, window_bottom, window_bottom + window])
+			window_bottom += 90.0
+		if not failures.is_empty():
+			return
+
+
+func test_platforms_use_both_sides_and_the_middle() -> void:
+	for level_seed: int in range(1, 31):
+		var counts: Array[int] = [0, 0, 0]  # left, middle, right
+		var layout: Array[Dictionary] = _layout(level_seed)
+		for platform: Dictionary in layout:
+			var x: float = platform["x"]
+			counts[0 if x < -100.0 else (2 if x > 100.0 else 1)] += 1
+		for i: int in 3:
+			assert_true(counts[i] >= layout.size() * 0.15,
+				"seed %d: left/middle/right counts %s are lopsided" % [level_seed, counts])
+		if not failures.is_empty():
+			return
+
+
+func test_side_targets_are_reachable_for_every_platform_width() -> void:
+	var widest: int = Generator.TOP_PLATFORM_TILES
+	for widths: Vector2i in Generator.REGION_WIDTHS:
+		widest = maxi(widest, widths.y)
+	var limit: float = Generator.HALF_WIDTH - widest * 8.0
+	assert_true(Generator.SIDE_TARGET_RANGE.y <= limit,
+		"side targets go to %.0f but a %d-tile platform stops at %.0f" % [Generator.SIDE_TARGET_RANGE.y, widest, limit])
+
+
+func test_route_heads_for_the_other_side_or_the_middle() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1
+	for i: int in 50:
+		var from_right: float = Generator.next_target(rng, 1.0, true)
+		assert_true(from_right <= 60.0, "after the right side the route went to %.0f" % from_right)
+		var from_left: float = Generator.next_target(rng, -1.0, true)
+		assert_true(from_left >= -60.0, "after the left side the route went to %.0f" % from_left)
+		var after_middle: float = Generator.next_target(rng, -1.0, false)
+		assert_true(after_middle >= Generator.SIDE_TARGET_RANGE.x, "no two middle stops in a row (went to %.0f)" % after_middle)
+
+
 func test_level_offers_side_routes() -> void:
 	var branches: int = 0
 	for platform: Dictionary in _layout(5):
