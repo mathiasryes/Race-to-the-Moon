@@ -21,9 +21,9 @@ enum State { COUNTDOWN, RACING, LOST, WON }
 ## Seconds before liftoff. The player can already climb: it's a head start.
 @export var countdown_time: float = 3.0
 ## Rocket climb speed after it has finished accelerating, in px/s.
-@export var cruise_speed: float = 55.0
+@export var cruise_speed: float = 40.0
 ## Seconds the rocket takes to reach cruise speed after liftoff.
-@export var acceleration_time: float = 3.0
+@export var acceleration_time: float = 4.0
 ## Warning starts when the nozzle is this many px below the top of the screen.
 @export var danger_zone: float = 100.0
 

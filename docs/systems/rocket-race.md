@@ -15,11 +15,11 @@
 | Value | Default | Effect |
 |---|---|---|
 | countdown_time | 3 s | head start |
-| cruise_speed | 55 px/s | main difficulty knob |
-| acceleration_time | 3 s | how gentle liftoff is |
+| cruise_speed | 40 px/s | main difficulty knob |
+| acceleration_time | 4 s | how gentle liftoff is |
 | danger_zone | 100 px | how early the warning shows |
 
-With the defaults in level_01 (8 platforms, 48 px apart): standing still loses after ~11 s, one platform per second wins, one platform per 2.5 s loses at platform 4. `race_scenarios.gd` checks exactly this, so update it if you retune.
+On the generated level (3200 px): standing still loses after ~14 s, climbing at 1.5× the rocket's speed wins in ~53 s, climbing at 0.6× loses about 15% of the way up. `race_scenarios.gd` checks exactly this on a fixed seed.
 
 ## Signals (for sound, effects, UI)
 `countdown_changed(seconds_left)`, `lifted_off`, `danger_changed(amount 0..1)`, `race_lost`, `race_won`.
