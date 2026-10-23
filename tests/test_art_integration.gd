@@ -35,5 +35,6 @@ func test_all_art_files_load() -> void:
 		"res://assets/art/player/dog.png", "res://assets/art/rocket/rocket.png", "res://assets/art/rocket/flame.png",
 		"res://assets/art/tiles/platforms.png", "res://assets/art/backgrounds/sky_gradient.png",
 		"res://assets/art/props/moon.png", "res://player/dog_frames.tres",
+		"res://assets/art/pickups/treat.png", "res://assets/art/ui/dash_icon.png", "res://levels/pickups/treat_frames.tres",
 	]:
 		assert_true(load(path) != null, "could not load " + path)
