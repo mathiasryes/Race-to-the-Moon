@@ -1,6 +1,7 @@
 class_name Player
 extends CharacterBody2D
-## Platformer player: run, jump with coyote time, jump buffering and variable jump height.
+## Platformer player: run, jump with coyote time, jump buffering and variable jump height,
+## a double jump in the air and a horizontal dash with limited charges.
 ## Jump is tuned by height and timing (pixels / seconds) instead of raw gravity values.
 
 signal jumped
@@ -44,34 +45,60 @@ signal dash_charges_changed(charges: int)
 
 ## Dashes left right now.
 var dash_charges: int = 1
+## Air jumps left before landing again.
+var air_jumps_left: int = 1
+## 1.0 = facing right, -1.0 = facing left. Used when dashing with no direction held.
+var facing: float = 1.0
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
 var _was_on_floor: bool = true
+var _dash_timer: float = 0.0
+var _dash_direction: float = 1.0
 
 @onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
+func _ready() -> void:
+	air_jumps_left = air_jumps
+	dash_charges = max_dash_charges
+	# Deferred so a HUD that connects in its own _ready still gets the starting value.
+	dash_charges_changed.emit.call_deferred(dash_charges)
+
+
 func _physics_process(delta: float) -> void:
 	var direction: float = Input.get_axis("move_left", "move_right")
-	update_timers(delta, is_on_floor(), Input.is_action_just_pressed("jump"))
+	update_facing(direction)
+	var jump_pressed: bool = Input.is_action_just_pressed("jump")
+	update_timers(delta, is_on_floor(), jump_pressed)
 
-	velocity.y = minf(velocity.y + current_gravity() * delta, max_fall_speed)
-	if can_jump():
-		_jump()
-	if Input.is_action_just_released("jump") and velocity.y < 0.0:
-		velocity.y *= jump_cut_multiplier
+	if Input.is_action_just_pressed("dash"):
+		try_dash(direction)
 
-	velocity.x = next_horizontal_speed(velocity.x, direction, delta, is_on_floor())
+	if is_dashing():
+		velocity = get_dash_velocity()
+		advance_dash(delta)
+	else:
+		velocity.y = minf(velocity.y + current_gravity() * delta, max_fall_speed)
+		if can_jump():
+			_jump()
+		elif can_double_jump(is_on_floor(), jump_pressed):
+			_double_jump()
+		if Input.is_action_just_released("jump") and velocity.y < 0.0:
+			velocity.y *= jump_cut_multiplier
+		velocity.x = next_horizontal_speed(velocity.x, direction, delta, is_on_floor())
+
 	move_and_slide()
 	if is_on_floor() and not _was_on_floor:
 		landed.emit()
 	_was_on_floor = is_on_floor()
-	_update_animation(direction)
+	_update_animation()
 
 
 ## Which animation in dog_frames.tres fits the current movement.
-static func animation_for(current_velocity: Vector2, on_floor: bool) -> StringName:
+static func animation_for(current_velocity: Vector2, on_floor: bool, dashing: bool = false) -> StringName:
+	if dashing:
+		return &"dash"
 	if not on_floor:
 		return &"jump" if current_velocity.y < 0.0 else &"fall"
 	return &"run" if absf(current_velocity.x) > 10.0 else &"idle"
@@ -113,6 +140,7 @@ func current_gravity() -> float:
 func update_timers(delta: float, on_floor: bool, jump_pressed: bool) -> void:
 	if on_floor:
 		_coyote_timer = coyote_time
+		air_jumps_left = air_jumps  # dash charges deliberately do NOT come back here
 	else:
 		_coyote_timer = maxf(_coyote_timer - delta, 0.0)
 
@@ -126,6 +154,50 @@ func can_jump() -> bool:
 	return _coyote_timer > 0.0 and _jump_buffer_timer > 0.0
 
 
+## True when a jump pressed this frame should be an air jump: airborne, coyote time over,
+## and air jumps left. Uses the fresh press (not the buffer) so a jump buffered for landing
+## stays a normal ground jump.
+func can_double_jump(on_floor: bool, jump_pressed: bool) -> bool:
+	return jump_pressed and not on_floor and _coyote_timer <= 0.0 and air_jumps_left > 0
+
+
+func update_facing(direction: float) -> void:
+	if direction != 0.0:
+		facing = signf(direction)
+
+
+func is_dashing() -> bool:
+	return _dash_timer > 0.0
+
+
+## Starts a dash in `direction` (or the facing direction if 0). Returns false if no charge is left
+## or a dash is already running.
+func try_dash(direction: float) -> bool:
+	if dash_charges <= 0 or is_dashing():
+		return false
+	_dash_direction = signf(direction) if direction != 0.0 else facing
+	facing = _dash_direction
+	_dash_timer = dash_time
+	dash_charges -= 1
+	dashed.emit()
+	dash_charges_changed.emit(dash_charges)
+	return true
+
+
+## Velocity while dashing: straight sideways, no gravity.
+func get_dash_velocity() -> Vector2:
+	return Vector2(_dash_direction * dash_speed, 0.0)
+
+
+## Counts the dash down. When it ends, horizontal speed drops to run speed in the dash direction.
+func advance_dash(delta: float) -> void:
+	if not is_dashing():
+		return
+	_dash_timer = maxf(_dash_timer - delta, 0.0)
+	if not is_dashing():
+		velocity = Vector2(_dash_direction * run_speed, 0.0)
+
+
 func next_horizontal_speed(current: float, direction: float, delta: float, on_floor: bool) -> float:
 	if direction != 0.0:
 		var accel: float = ground_acceleration if on_floor else air_acceleration
@@ -134,10 +206,9 @@ func next_horizontal_speed(current: float, direction: float, delta: float, on_fl
 	return move_toward(current, 0.0, decel * delta)
 
 
-func _update_animation(direction: float) -> void:
-	if direction != 0.0:
-		_sprite.flip_h = direction < 0.0  # the sprite sheet faces right
-	var animation: StringName = animation_for(velocity, is_on_floor())
+func _update_animation() -> void:
+	_sprite.flip_h = facing < 0.0  # the sprite sheet faces right
+	var animation: StringName = animation_for(velocity, is_on_floor(), is_dashing())
 	if _sprite.animation != animation:
 		_sprite.play(animation)
 
@@ -147,3 +218,10 @@ func _jump() -> void:
 	_coyote_timer = 0.0
 	_jump_buffer_timer = 0.0
 	jumped.emit()
+
+
+func _double_jump() -> void:
+	velocity.y = get_double_jump_velocity()
+	air_jumps_left -= 1
+	_jump_buffer_timer = 0.0  # this press is used up; don't jump again on landing
+	double_jumped.emit()
