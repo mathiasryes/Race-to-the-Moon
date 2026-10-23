@@ -14,6 +14,7 @@
 [ext_resource type="Script" path="res://levels/race/race_director.gd" id="12_director"]
 [ext_resource type="PackedScene" path="res://levels/race/goal.tscn" id="13_goal"]
 [ext_resource type="PackedScene" path="res://ui/race_hud.tscn" id="14_hud"]
+[ext_resource type="Script" path="res://audio/race_sounds.gd" id="15_sounds"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall"]
 size = Vector2(16, 1200)
@@ -127,4 +128,9 @@ rocket = NodePath("../Decor/Rocket")
 goal = NodePath("../Goal")
 
 [node name="RaceHud" parent="." node_paths=PackedStringArray("director") instance=ExtResource("14_hud")]
+director = NodePath("../RaceDirector")
+
+[node name="RaceSounds" type="Node" parent="." node_paths=PackedStringArray("player", "director")]
+script = ExtResource("15_sounds")
+player = NodePath("../Player")
 director = NodePath("../RaceDirector")

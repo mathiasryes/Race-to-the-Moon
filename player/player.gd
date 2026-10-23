@@ -3,6 +3,9 @@ extends CharacterBody2D
 ## Platformer player: run, jump with coyote time, jump buffering and variable jump height.
 ## Jump is tuned by height and timing (pixels / seconds) instead of raw gravity values.
 
+signal jumped
+signal landed
+
 @export_group("Run")
 @export var run_speed: float = 140.0
 @export var ground_acceleration: float = 1200.0
@@ -24,6 +27,7 @@ extends CharacterBody2D
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
+var _was_on_floor: bool = true
 
 @onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 
@@ -40,6 +44,9 @@ func _physics_process(delta: float) -> void:
 
 	velocity.x = next_horizontal_speed(velocity.x, direction, delta, is_on_floor())
 	move_and_slide()
+	if is_on_floor() and not _was_on_floor:
+		landed.emit()
+	_was_on_floor = is_on_floor()
 	_update_animation(direction)
 
 
@@ -102,3 +109,4 @@ func _jump() -> void:
 	velocity.y = get_jump_velocity()
 	_coyote_timer = 0.0
 	_jump_buffer_timer = 0.0
+	jumped.emit()

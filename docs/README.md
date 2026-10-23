@@ -2,6 +2,9 @@
 
 Open this `docs/` folder as a vault in Obsidian (*Open folder as vault*). It is part of the Git repo, so pulling the repo syncs it for everyone. The AI updates it at the end of each task (see the `wrap-up` skill).
 
+## Briefs (start here if you're new)
+- [[art-and-sound-brief]] – everything an artist or sound designer needs: specs, file names, what's wanted
+
 ## Design
 - [[game-design]] – what the game is, core loop, open questions
 
@@ -9,6 +12,8 @@ Open this `docs/` folder as a vault in Obsidian (*Open folder as vault*). It is 
 - [[player-movement]] – running, jumping, coyote time, jump buffer
 - [[art-pipeline]] – generated pixel art, every asset, how it's used in Godot
 - [[rocket-race]] – countdown, liftoff, lose when the rocket leaves the screen, win at the moon
+
+- [[sound-system]] – sounds played by name from dropped-in files; where each sound is triggered
 
 ## Decisions
 - [[0001-godot-4]] – Godot 4 over Unity

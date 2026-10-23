@@ -14,6 +14,9 @@ Move: A/D or arrow keys · Jump: Space / W / ↑ (hold to jump higher) · Restar
 
 Beat the rocket to the moon: if it leaves the top of the screen, you lose.
 
+## Making art or sound?
+Read [docs/briefs/art-and-sound-brief.md](docs/briefs/art-and-sound-brief.md): specs, file names and how to hand work over. Sounds and art are picked up automatically when dropped into `assets/` with the right names.
+
 ## Editor setup (VS Code)
 Install the recommended extensions when VS Code asks (godot-tools, EditorConfig, Claude Code).
 In Godot: *Editor Settings → Text Editor → External* → enable **Use External Editor**, set *Exec Path* to VS Code and *Exec Flags* to `{project} --goto {file}:{line}:{col}`.
