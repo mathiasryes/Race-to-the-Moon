@@ -27,14 +27,14 @@ Climb → keep ahead of the rocket → avoid hazards → climb higher → reach 
 | Action | Keyboard | Gamepad |
 |---|---|---|
 | Move | A/D or ←/→ | D-pad / left stick |
-| Jump | Space, W or ↑ (hold for higher jump) | A / Cross |
+| Jump | Space (hold for higher jump) | A / Cross |
 | Double jump | Jump again in the air (once per jump) | A / Cross |
-| Dash | Shift, X or K | X / Square |
+| Dash | Shift, X or K, aimed with W/A/S/D or arrows (8 directions; W+D = up-right) | X / Square, aimed with stick |
 | Restart | R or Enter | Start |
 
 ## Movement and treats
 - **Double jump:** one extra jump in the air, back every time you land.
-- **Dash:** a quick horizontal burst. You start with **one**. It does **not** come back on landing.
+- **Dash:** a quick burst in any of 8 directions, aimed with the movement keys (about 82 px). You start with **one**. It does **not** come back on landing.
 - **Dog treats** are scattered around the level. Grabbing one **refills the dash**. Many sit on dead ends or spots only a dash can reach, so detours are a gamble against the rocket.
 
 ## Level feel

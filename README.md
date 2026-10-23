@@ -10,7 +10,7 @@ A 2D vertical platformer made in Godot 4.7 by a team of three.
 4. Optional: open `docs/` in Obsidian as a vault.
 
 ## Controls
-Move: A/D or arrow keys · Jump: Space / W / ↑ (hold to jump higher, press again in the air to double jump) · Dash: Shift / X / K · Restart: R / Enter · Gamepad supported.
+Move: A/D or ←/→ · Jump: Space (hold to jump higher, press again in the air to double jump) · Dash: Shift / X / K, aimed in 8 directions with W/A/S/D or the arrows · Restart: R / Enter · Gamepad supported.
 
 Beat the rocket to the moon: if it leaves the top of the screen, you lose. You get one dash; dog treats refill it.
 

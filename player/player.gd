@@ -1,7 +1,7 @@
 class_name Player
 extends CharacterBody2D
 ## Platformer player: run, jump with coyote time, jump buffering and variable jump height,
-## a double jump in the air and a horizontal dash with limited charges.
+## a double jump in the air and an 8-direction dash (aimed with the movement keys) with limited charges.
 ## Jump is tuned by height and timing (pixels / seconds) instead of raw gravity values.
 
 signal jumped
@@ -54,7 +54,7 @@ var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
 var _was_on_floor: bool = true
 var _dash_timer: float = 0.0
-var _dash_direction: float = 1.0
+var _dash_direction: Vector2 = Vector2.RIGHT
 
 @onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 
@@ -73,7 +73,7 @@ func _physics_process(delta: float) -> void:
 	update_timers(delta, is_on_floor(), jump_pressed)
 
 	if Input.is_action_just_pressed("dash"):
-		try_dash(direction)
+		try_dash(Input.get_vector("move_left", "move_right", "move_up", "move_down"))
 
 	if is_dashing():
 		velocity = get_dash_velocity()
@@ -113,7 +113,7 @@ func get_double_jump_velocity() -> float:
 	return -sqrt(2.0 * get_jump_gravity() * double_jump_height)
 
 
-## Horizontal distance one dash covers.
+## Distance one dash covers, in whichever direction it goes.
 func get_dash_distance() -> float:
 	return dash_speed * dash_time
 
@@ -170,13 +170,13 @@ func is_dashing() -> bool:
 	return _dash_timer > 0.0
 
 
-## Starts a dash in `direction` (or the facing direction if 0). Returns false if no charge is left
-## or a dash is already running.
-func try_dash(direction: float) -> bool:
+## Starts a dash aimed by `aim` (the movement keys/stick; y < 0 is up). Returns false if no charge is
+## left or a dash is already running.
+func try_dash(aim: Vector2) -> bool:
 	if dash_charges <= 0 or is_dashing():
 		return false
-	_dash_direction = signf(direction) if direction != 0.0 else facing
-	facing = _dash_direction
+	_dash_direction = dash_direction_for(aim, facing)
+	update_facing(_dash_direction.x)
 	_dash_timer = dash_time
 	dash_charges -= 1
 	dashed.emit()
@@ -184,18 +184,34 @@ func try_dash(direction: float) -> bool:
 	return true
 
 
-## Velocity while dashing: straight sideways, no gravity.
+## Snaps an aim input to one of 8 directions (unit length). No aim = straight ahead the way the dog faces.
+## Small stick tilts are ignored so a slightly-off stick still gives a clean straight dash.
+static func dash_direction_for(aim: Vector2, facing_direction: float) -> Vector2:
+	var snapped_aim := Vector2(
+		signf(aim.x) if absf(aim.x) > 0.3 else 0.0,
+		signf(aim.y) if absf(aim.y) > 0.3 else 0.0)
+	if snapped_aim == Vector2.ZERO:
+		return Vector2(facing_direction, 0.0)
+	return snapped_aim.normalized()
+
+
+func get_dash_direction() -> Vector2:
+	return _dash_direction
+
+
+## Velocity while dashing: straight along the dash direction, no gravity.
 func get_dash_velocity() -> Vector2:
-	return Vector2(_dash_direction * dash_speed, 0.0)
+	return _dash_direction * dash_speed
 
 
-## Counts the dash down. When it ends, horizontal speed drops to run speed in the dash direction.
+## Counts the dash down. When it ends, speed drops to run speed along the dash direction
+## (so an upward dash still carries a little upward momentum).
 func advance_dash(delta: float) -> void:
 	if not is_dashing():
 		return
 	_dash_timer = maxf(_dash_timer - delta, 0.0)
 	if not is_dashing():
-		velocity = Vector2(_dash_direction * run_speed, 0.0)
+		velocity = _dash_direction * run_speed
 
 
 func next_horizontal_speed(current: float, direction: float, delta: float, on_floor: bool) -> float:

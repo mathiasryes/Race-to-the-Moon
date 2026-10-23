@@ -121,13 +121,13 @@ func test_dash_consumes_a_charge_and_is_refused_at_zero() -> void:
 	var events: Array[int] = []
 	player.dashed.connect(func() -> void: events.append(-1))
 	player.dash_charges_changed.connect(func(charges: int) -> void: events.append(charges))
-	assert_true(player.try_dash(1.0))
+	assert_true(player.try_dash(Vector2.RIGHT))
 	assert_eq(player.dash_charges, 0)
 	assert_true(player.is_dashing())
 	assert_eq(events, [-1, 0] as Array[int])
 	player.advance_dash(player.dash_time + 0.01)
 	assert_false(player.is_dashing())
-	assert_false(player.try_dash(1.0), "no charges left")
+	assert_false(player.try_dash(Vector2.RIGHT), "no charges left")
 	assert_eq(player.dash_charges, 0)
 	player.free()
 
@@ -136,21 +136,58 @@ func test_dash_uses_held_or_facing_direction() -> void:
 	var player: Player = _make_player()
 	player.dash_charges = 2
 	player.update_facing(-1.0)
-	assert_true(player.try_dash(0.0))
+	assert_true(player.try_dash(Vector2.ZERO))
 	assert_almost_eq(player.get_dash_velocity().x, -player.dash_speed)
 	assert_almost_eq(player.get_dash_velocity().y, 0.0)
 	player.advance_dash(player.dash_time + 0.01)
 	assert_almost_eq(player.velocity.x, -player.run_speed, 0.001, "keeps run speed after the dash")
-	assert_true(player.try_dash(1.0))
+	assert_true(player.try_dash(Vector2.RIGHT))
 	assert_almost_eq(player.get_dash_velocity().x, player.dash_speed)
 	assert_almost_eq(player.facing, 1.0)
+	player.free()
+
+
+func test_dash_aims_in_eight_directions() -> void:
+	var diagonal: float = sqrt(0.5)
+	assert_eq(PlayerScript.dash_direction_for(Vector2(0, -1), 1.0), Vector2.UP, "W = up")
+	assert_eq(PlayerScript.dash_direction_for(Vector2(0, 1), 1.0), Vector2.DOWN, "S = down")
+	assert_eq(PlayerScript.dash_direction_for(Vector2(-1, 0), 1.0), Vector2.LEFT, "A = left")
+	var up_right: Vector2 = PlayerScript.dash_direction_for(Vector2(0.7071, -0.7071), -1.0)
+	assert_almost_eq(up_right.x, diagonal, 0.001, "W+D = up-right")
+	assert_almost_eq(up_right.y, -diagonal, 0.001, "W+D = up-right")
+	var up_left: Vector2 = PlayerScript.dash_direction_for(Vector2(-0.7071, -0.7071), 1.0)
+	assert_almost_eq(up_left.x, -diagonal, 0.001, "W+A = up-left")
+	assert_almost_eq(up_left.y, -diagonal, 0.001, "W+A = up-left")
+	assert_eq(PlayerScript.dash_direction_for(Vector2.ZERO, -1.0), Vector2.LEFT, "no aim = facing direction")
+	assert_eq(PlayerScript.dash_direction_for(Vector2(0.95, -0.2), 1.0), Vector2.RIGHT, "small stick tilt ignored")
+
+
+func test_diagonal_dash_covers_the_same_distance() -> void:
+	var player: Player = _make_player()
+	player.dash_charges = 1
+	assert_true(player.try_dash(Vector2(1, -1)))
+	assert_almost_eq(player.get_dash_velocity().length(), player.dash_speed, 0.01)
+	assert_true(player.get_dash_velocity().y < 0.0, "goes up")
+	player.free()
+
+
+func test_upward_dash_keeps_some_rise_and_facing() -> void:
+	var player: Player = _make_player()
+	player.dash_charges = 1
+	player.update_facing(-1.0)
+	assert_true(player.try_dash(Vector2.UP))
+	assert_almost_eq(player.get_dash_velocity().x, 0.0)
+	assert_almost_eq(player.get_dash_velocity().y, -player.dash_speed)
+	assert_almost_eq(player.facing, -1.0, 0.001, "dashing straight up doesn't turn the dog around")
+	player.advance_dash(player.dash_time + 0.01)
+	assert_almost_eq(player.velocity.y, -player.run_speed, 0.001, "still moving up a little after the dash")
 	player.free()
 
 
 func test_dash_does_not_recharge_on_landing() -> void:
 	var player: Player = _make_player()
 	player.dash_charges = 1
-	player.try_dash(1.0)
+	player.try_dash(Vector2.RIGHT)
 	player.advance_dash(player.dash_time + 0.01)
 	player.update_timers(0.016, true, false)  # landed
 	assert_eq(player.dash_charges, 0)
@@ -177,7 +214,7 @@ func test_dash_distance_matches_speed_and_time() -> void:
 	assert_almost_eq(player.get_dash_distance(), player.dash_speed * player.dash_time)
 	# Simulate at 60 fps: distance covered while dashing is close to the configured distance.
 	player.dash_charges = 1
-	player.try_dash(1.0)
+	player.try_dash(Vector2.RIGHT)
 	var travelled: float = 0.0
 	var step: float = 1.0 / 60.0
 	while player.is_dashing():
