@@ -1,0 +1,22 @@
+# Godot cache and generated files
+.godot/
+/android/
+*.translation
+
+# Export output
+builds/
+
+# Personal / machine-local files
+CLAUDE.local.md
+.claude/settings.local.json
+.vscode/*.local.json
+
+# Obsidian per-user layout (the rest of .obsidian is shared)
+docs/.obsidian/workspace*.json
+docs/.obsidian/cache
+
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp

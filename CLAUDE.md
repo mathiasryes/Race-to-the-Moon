@@ -1,0 +1,36 @@
+# Race to the Moon
+
+A 2D vertical platformer made by a team of 3 in **Godot 4.7** (GDScript). The player climbs upward toward the moon.
+Keep this file short: rules and pointers only. Design notes, decisions and logs live in `docs/` (an Obsidian vault).
+
+## Engine and language rules
+- Godot **4.7**, GDScript. **Never use Godot 3 APIs** (e.g. `KinematicBody2D`, `yield`, `export var`, `onready var`, `move_and_slide(velocity)`).
+  Use Godot 4: `CharacterBody2D`, `await`, `@export`, `@onready`, `move_and_slide()` with the `velocity` property.
+- Static typing everywhere: typed variables, parameters and return types (`var speed: float = 0.0`, `func f(x: int) -> void`).
+  The project warns on untyped declarations; treat those warnings as errors.
+- Tabs for indentation in `.gd` files. `snake_case` for files, folders, functions and variables; `PascalCase` for `class_name` and node names.
+- Prefer signals and exported properties over hard-coded node paths into other scenes. A scene should work when run on its own (F6).
+- Pixel art: base resolution 640x360, integer scaling, nearest filtering. Tile size 16px. Don't change these without a decision note.
+
+## Project layout
+- `player/`, `levels/`, `ui/`, `autoload/`: organised **by feature**; a scene and its script sit side by side (`player/player.tscn` + `player/player.gd`).
+- `levels/blocks/`: reusable level pieces (platforms, hazards).
+- `assets/art|audio|fonts/`: raw imported assets (stored in Git LFS).
+- `tests/test_*.gd`: tests; `tests/framework/`: tiny built-in test runner (no addon).
+- `docs/`: Obsidian vault (Godot ignores it via `.gdignore`). `tools/`: helper scripts.
+
+## Commands
+- Run all checks (import + tests): `pwsh tools/check.ps1` on Windows, `tools/check.sh` on macOS/Linux. Uses `$GODOT` or `godot` on PATH.
+- Run the game headless briefly to catch load errors: `godot --headless --path . --quit-after 120`
+- **Always run the checks before saying a task is done**, and add or update a test in `tests/` for any gameplay logic you change.
+
+## Editing scenes as text
+- `.tscn` / `.tres` files are text and may be edited directly, but keep edits small. Don't invent `uid=` values; leave them out and Godot adds them.
+- Commit `.uid` files that Godot generates next to scripts. Never commit `.godot/`.
+- If a change is easier in the editor (tilemaps, animations, complex UI), say so and describe the steps instead of hand-writing large scene files.
+
+## Teamwork
+- Three people work on this. One branch per feature (`feature/short-name`), small pull requests to `main`, never commit directly to `main`.
+- Avoid editing a scene someone else is likely working on; prefer creating a new small scene and instancing it.
+- When a task finishes, update the relevant note in `docs/systems/` and, for a real choice between options, add a note in `docs/decisions/` (see the `wrap-up` skill).
+- Add a rule here only when the AI keeps making the same mistake. Remove rules that no longer apply.

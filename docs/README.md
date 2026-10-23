@@ -1,0 +1,20 @@
+# Race to the Moon – Knowledge Vault
+
+Open this `docs/` folder as a vault in Obsidian (*Open folder as vault*). It is part of the Git repo, so pulling the repo syncs it for everyone. The AI updates it at the end of each task (see the `wrap-up` skill).
+
+## Design
+- [[game-design]] – what the game is, core loop, open questions
+
+## Systems
+- [[player-movement]] – running, jumping, coyote time, jump buffer
+
+## Decisions
+- [[0001-godot-4]] – Godot 4 over Unity
+- [[0002-pixel-art-640x360]] – pixel art at 640x360
+- [[0003-built-in-test-runner]] – tiny built-in test runner instead of an addon
+
+## Devlog
+- [[2026-10-23]] – project set up
+
+## Templates
+- `templates/` – copy these for new system and decision notes

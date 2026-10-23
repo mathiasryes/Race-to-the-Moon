@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(godot:*)",
+      "Bash(tools/check.sh)",
+      "PowerShell(pwsh tools/check.ps1)",
+      "PowerShell(& tools/check.ps1)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)"
+    ]
+  }
+}

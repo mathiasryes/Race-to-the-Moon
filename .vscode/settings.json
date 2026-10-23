@@ -1,0 +1,10 @@
+{
+  "[gdscript]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  },
+  "files.exclude": {
+    "**/.godot": true,
+    "**/*.uid": true
+  }
+}

@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pull LFS files through a cache to save the (limited) LFS bandwidth quota.
+      - name: List LFS files
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+      - name: Restore LFS cache
+        uses: actions/cache@v4
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+      - name: Pull LFS files
+        run: git lfs pull
+
+      - name: Install Godot
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q "Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+
+      - name: Import project
+        run: godot --headless --path . --import
+
+      - name: Run tests
+        run: godot --headless --path . -s res://tests/framework/run_tests.gd
+
+      - name: Smoke-run main scene
+        run: godot --headless --path . --quit-after 120
+
+      # Builds only on main (not on every PR) to keep CI fast.
+      - name: Restore export templates
+        if: github.ref == 'refs/heads/main'
+        id: templates
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-templates-${{ env.GODOT_VERSION }}
+
+      - name: Download export templates
+        if: github.ref == 'refs/heads/main' && steps.templates.outputs.cache-hit != 'true'
+        run: |
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q "Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -d /tmp/templates
+          mv /tmp/templates/templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
+
+      - name: Export Windows build
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p builds/windows
+          godot --headless --path . --export-release "Windows Desktop" builds/windows/RaceToTheMoon.exe
+          test -f builds/windows/RaceToTheMoon.exe
+
+      - name: Upload Windows build
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: RaceToTheMoon-windows-${{ github.sha }}
+          path: builds/windows/
+          retention-days: 14
