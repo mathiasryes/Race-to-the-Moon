@@ -79,4 +79,12 @@ animations = [{
 "loop": false,
 "name": &"fall",
 "speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_run0")
+}],
+"loop": false,
+"name": &"dash",
+"speed": 5.0
 }]
