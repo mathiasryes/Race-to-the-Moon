@@ -92,7 +92,7 @@ Drop files into these folders with **exactly these names**. They play automatica
 |---|---|---|
 | `assets/audio/sfx/` | `.wav` (preferred) or `.ogg` | short one-shot effects |
 | `assets/audio/loops/` | `.ogg` or `.wav` | sounds that loop while something lasts |
-| `assets/audio/music/` | `.ogg` (preferred) or `.wav` | music, loops automatically |
+| `assets/audio/music/` | `.ogg`, `.mp3` or `.wav` | music, loops automatically |
 
 **Placeholder bleeps** fill in any sound that isn't made yet, so you can hear where each sound goes. Replace them with your own files (same name; if you switch to `.ogg`, delete the `.wav`). The placeholder script never overwrites existing files.
 
@@ -118,7 +118,8 @@ Drop files into these folders with **exactly these names**. They play automatica
 | `warning_alarm` | loops | while the warning shows | seamless loop. The game makes it **louder the closer** the rocket is to escaping | 🔲 |
 | `win` | sfx | reached the moon first | happy jingle, 1-4 s | ✅ |
 | `lose` | sfx | the rocket escaped | "aww" jingle, 1-3 s | ✅ |
-| `race` | music | during the climb | upbeat, seamless loop, ~1-2 min | 🔲 (no music yet) |
+| `below_atmosphere` | music | from the launch pad up through the atmosphere (first 60% of the climb) | "Stellar Ascent", loops; `.mp3` is fine | ✅ |
+| `above_atmosphere` | music | once in space (last 40%), crossfades in over ~2 s | "Vector Ascent", loops; `.mp3` is fine | ✅ |
 
 Ideas for later (tell the coders and they'll add the hooks): music per region (launch / sky / space), menu music, UI clicks, obstacle hits, more barks or whines (e.g. on losing), ambient wind in the sky, quiet space ambience.
 

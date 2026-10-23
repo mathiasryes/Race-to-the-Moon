@@ -5,9 +5,9 @@
 **Placeholders:** `tools/audio/generate_placeholder_sounds.py` (synth bleeps; don't re-run once real sounds are in)
 
 ## How it works
-- `Sound` plays sounds **by name**, looking for `assets/audio/<sfx|loops|music>/<name>.ogg|.wav`. Missing files are skipped. Adding audio = dropping in a correctly named file (see [[art-and-sound-brief]] for the list).
+- `Sound` plays sounds **by name**, looking for `assets/audio/<sfx|loops|music>/<name>.ogg|.wav|.mp3`. Missing files are skipped. Adding audio = dropping in a correctly named file (see [[art-and-sound-brief]] for the list).
 - Names are listed in `SFX`, `LOOPS`, `MUSIC` in `sound.gd`. Unknown names log a warning.
-- API: `Sound.play(name)`, `Sound.set_loop(name, on)`, `Sound.set_loop_amount(name, 0..1)`, `Sound.play_music(name)`, `Sound.stop_all()`, `Sound.release_all()`.
+- API: `Sound.play(name)`, `Sound.set_loop(name, on)`, `Sound.set_loop_amount(name, 0..1)`, `Sound.play_music(name, fade_time)` (crossfades when `fade_time` > 0), `Sound.current_music()`, `Sound.stop_all()`, `Sound.release_all()`.
 - One-shots use a pool of 8 players; jump, land, double_jump and dash get slight random pitch. Music and loops are forced to loop whatever the file format.
 - **Buses:** Master → `Music` (-6 dB) and `SFX`. Balance in the editor's Audio tab.
 - Keeps playing while the game is paused (win/lose screens).
@@ -18,7 +18,8 @@ Gameplay code only emits signals; `RaceSounds` (a node in the level) maps them t
 
 | Signal | Sound |
 |---|---|
-| level starts | music `race` |
+| level starts | music `below_atmosphere` ("Stellar Ascent") |
+| player height (`RaceSounds.music_for()`, needs `generator`) | from `space_music_from` (60% of the climb, where space starts) crossfade to `above_atmosphere` ("Vector Ascent") over `music_fade_time` (2 s); back down only below 57% (`music_switch_margin`) so it doesn't flip-flop |
 | `Player.jumped` | `jump` |
 | `Player.landed` | by surface (`Player.floor_zone()`): grass → `land_grass`, launch pad/girder/solar → `land_metal`, cloud → `land_cloud`, asteroid/moon → `land_rock`; a fall longer than `heavy_landing_height` (160 px, `Player.last_fall_height`) → `land_heavy`. See `RaceSounds.landing_sound()` |
 | `RaceDirector.lifted_off` (+ `woof_delay` 0.6 s) | `woof` |

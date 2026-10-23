@@ -29,11 +29,14 @@ const LOOPS: Dictionary = {
 	&"warning_alarm": "while the warning shows; louder as the rocket gets closer to escaping",
 }
 const MUSIC: Dictionary = {
-	&"race": "music during the climb",
+	&"below_atmosphere": "climb music from the launch pad up through the atmosphere (\"Stellar Ascent\")",
+	&"above_atmosphere": "climb music once in space (\"Vector Ascent\")",
 }
 
 const AUDIO_DIR := "res://assets/audio"
-const EXTENSIONS: Array[String] = ["ogg", "wav"]
+const EXTENSIONS: Array[String] = ["ogg", "wav", "mp3"]
+## Volume a crossfading track starts from / fades to.
+const SILENT_DB: float = -40.0
 const VOICES: int = 8
 ## Random pitch change for these effects so repeats don't sound identical.
 const PITCH_VARIATION: Dictionary = {
@@ -52,7 +55,9 @@ var _voices: Array[AudioStreamPlayer] = []
 var _next_voice: int = 0
 var _loops: Dictionary = {}  # StringName -> AudioStreamPlayer
 var _active_loops: Dictionary = {}  # StringName -> true while the loop is on
-var _music: AudioStreamPlayer
+var _music: AudioStreamPlayer  # the current track
+var _music_fading: AudioStreamPlayer  # the previous track while it fades out
+var _music_tween: Tween
 var _music_name: StringName = &""
 var _streams: Dictionary = {}  # cache: "folder/name" -> AudioStream (or null when there's no file)
 
@@ -62,6 +67,7 @@ func _ready() -> void:
 	for i: int in VOICES:
 		_voices.append(_new_player(&"SFX"))
 	_music = _new_player(&"Music")
+	_music_fading = _new_player(&"Music")
 
 
 func _exit_tree() -> void:
@@ -72,7 +78,10 @@ func _exit_tree() -> void:
 ## frames first, so the audio engine can let go of the sounds (otherwise Godot reports them as leaks).
 func release_all() -> void:
 	_active_loops.clear()
-	for player: AudioStreamPlayer in _voices + _loops.values() + [_music]:
+	if _music_tween:
+		_music_tween.kill()
+	_music_name = &""
+	for player: AudioStreamPlayer in _voices + _loops.values() + [_music, _music_fading]:
 		player.stop()
 		player.stream = null
 	_streams.clear()
@@ -132,20 +141,43 @@ func is_looping(sound: StringName) -> bool:
 	return _active_loops.has(sound)
 
 
-## Plays a music track (keeps going if it's already playing). An empty name stops the music.
-func play_music(track: StringName) -> void:
-	if track == _music_name and _music.playing:
+## Plays a music track (keeps going if it's already the current one). An empty name stops the music.
+## With `fade_time` > 0 the old track fades out while the new one fades in (a crossfade).
+func play_music(track: StringName, fade_time: float = 0.0) -> void:
+	if track == _music_name:
 		return
-	_music.stop()
 	_music_name = track
-	if track == &"":
-		return
-	_check_known(track, MUSIC)
-	_remember(track)
-	var stream: AudioStream = _stream("music", track)
+	if _music_tween:
+		_music_tween.kill()
+	_music_fading.stop()
+	# The current track becomes the fading one; the other player takes the new track.
+	var previous: AudioStreamPlayer = _music
+	_music = _music_fading
+	_music_fading = previous
+
+	var stream: AudioStream = null
+	if track != &"":
+		_check_known(track, MUSIC)
+		_remember(track)
+		stream = _stream("music", track)
 	if stream != null and not _silent:
 		_music.stream = _looping(stream)
+		_music.volume_db = SILENT_DB if fade_time > 0.0 else 0.0
 		_music.play()
+
+	if fade_time <= 0.0 or not (_music.playing or _music_fading.playing):
+		_music_fading.stop()
+		return
+	_music_tween = create_tween().set_parallel()
+	if _music.playing:
+		_music_tween.tween_property(_music, ^"volume_db", 0.0, fade_time)
+	if _music_fading.playing:
+		_music_tween.tween_property(_music_fading, ^"volume_db", SILENT_DB, fade_time)
+		_music_tween.chain().tween_callback(_music_fading.stop)
+
+
+func current_music() -> StringName:
+	return _music_name
 
 
 ## Stops loops and music, e.g. when the race ends or the level restarts.

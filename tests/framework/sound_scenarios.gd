@@ -20,7 +20,7 @@ func _run() -> void:
 
 	await _wait(0.5)
 	_check(sound, "countdown starts with a beep", &"countdown_beep")
-	_check_now(sound.get("history").count(&"race") > 0, "race music is requested at the start")
+	_check_now(sound.call("current_music") == &"below_atmosphere", "the lower-atmosphere music plays at the start")
 
 	Input.action_press("jump")
 	await _wait(0.1)
@@ -52,6 +52,26 @@ func _run() -> void:
 	_check(sound, "losing plays the lose jingle", &"lose")
 	_check_now(not sound.call("is_looping", &"rocket_engine"), "engine loop stops when the race ends")
 	_check_now(not sound.call("is_looping", &"warning_alarm"), "alarm loop stops when the race ends")
+	_check_now(sound.call("current_music") == &"", "music stops when the race ends")
+
+	# Music follows the height: a fresh level, with the dog teleported up and down the route.
+	paused = false
+	level.free()
+	level = load(LEVEL).instantiate()
+	root.add_child(level)
+	var generator: LevelGenerator = level.get_node("LevelGenerator")
+	player = level.get_node("Player")
+	var route: Array[Vector2] = generator.main_path
+	await _wait(0.1)
+	player.global_position = _route_point(route, generator.level_height, 0.75)
+	await _wait(0.2)
+	_check_now(sound.call("current_music") == &"above_atmosphere", "reaching space switches to the space music")
+	player.global_position = _route_point(route, generator.level_height, 0.59)
+	await _wait(0.2)
+	_check_now(sound.call("current_music") == &"above_atmosphere", "dropping just below the boundary keeps the space music")
+	player.global_position = _route_point(route, generator.level_height, 0.3)
+	await _wait(0.2)
+	_check_now(sound.call("current_music") == &"below_atmosphere", "falling well back down returns to the lower music")
 
 	print("\n%d sound checks failed" % _failed)
 	paused = false
@@ -60,6 +80,15 @@ func _run() -> void:
 	for i: int in 3:
 		await process_frame
 	quit(1 if _failed > 0 else 0)
+
+
+## A spot on the route platform closest to `fraction` of the climb (feet just above its surface).
+func _route_point(route: Array[Vector2], height: float, fraction: float) -> Vector2:
+	var best: Vector2 = route[0]
+	for point: Vector2 in route:
+		if absf(-point.y / height - fraction) < absf(-best.y / height - fraction):
+			best = point
+	return best + Vector2(0, -1)
 
 
 func _wait(seconds: float) -> void:

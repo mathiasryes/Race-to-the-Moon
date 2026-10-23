@@ -73,7 +73,8 @@ goal = NodePath("../Goal")
 director = NodePath("../RaceDirector")
 player = NodePath("../Player")
 
-[node name="RaceSounds" type="Node" parent="." node_paths=PackedStringArray("player", "director")]
+[node name="RaceSounds" type="Node" parent="." node_paths=PackedStringArray("player", "director", "generator")]
 script = ExtResource("15_sounds")
 player = NodePath("../Player")
 director = NodePath("../RaceDirector")
+generator = NodePath("../LevelGenerator")

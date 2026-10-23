@@ -6,7 +6,7 @@ const SoundScript := preload("res://autoload/sound.gd")
 func test_known_names() -> void:
 	assert_true(SoundScript.is_known(&"jump"))
 	assert_true(SoundScript.is_known(&"rocket_engine"))
-	assert_true(SoundScript.is_known(&"race"))
+	assert_true(SoundScript.is_known(&"below_atmosphere"))
 	assert_false(SoundScript.is_known(&"not_a_sound"))
 
 
@@ -17,7 +17,7 @@ func test_finds_dropped_in_files() -> void:
 
 
 func test_missing_files_are_skipped() -> void:
-	assert_eq(SoundScript.path_for("music", &"race"), "", "no music yet, so no path")
+	assert_eq(SoundScript.path_for("music", &"not_a_track"), "", "unknown track, so no path")
 	assert_eq(SoundScript.path_for("sfx", &"not_a_sound"), "")
 
 
