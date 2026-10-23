@@ -38,8 +38,8 @@ signal dash_charges_changed(charges: int)
 @export var double_jump_height: float = 56.0
 
 @export_group("Dash")
-@export var dash_speed: float = 320.0
-@export var dash_time: float = 0.16
+@export var dash_speed: float = 340.0
+@export var dash_time: float = 0.24
 ## Dashes available. They do NOT come back on landing; treats refill them (refill_dash).
 @export var max_dash_charges: int = 1
 
