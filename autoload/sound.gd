@@ -73,6 +73,20 @@ func _ready() -> void:
 		_voices.append(_new_player(&"SFX"))
 	_music = _new_player(&"Music")
 	_music_fading = _new_player(&"Music")
+	# Close the window ourselves so playing audio can be released first (otherwise Godot reports leaks).
+	get_tree().set_auto_accept_quit(false)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_quit_cleanly()
+
+
+func _quit_cleanly() -> void:
+	release_all()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	get_tree().quit()
 
 
 func _exit_tree() -> void:
