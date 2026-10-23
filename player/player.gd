@@ -5,6 +5,11 @@ extends CharacterBody2D
 
 signal jumped
 signal landed
+signal double_jumped
+signal dashed
+## A treat (or anything else) refilled the dash.
+signal dash_refilled
+signal dash_charges_changed(charges: int)
 
 @export_group("Run")
 @export var run_speed: float = 115.0
@@ -24,6 +29,21 @@ signal landed
 ## Seconds a jump press is remembered before landing.
 @export var jump_buffer_time: float = 0.12
 @export var max_fall_speed: float = 420.0
+
+@export_group("Double jump")
+## Extra jumps allowed in the air before landing again.
+@export var air_jumps: int = 1
+## Height of the extra jump in the air, in pixels (added on top of wherever the first jump got to).
+@export var double_jump_height: float = 56.0
+
+@export_group("Dash")
+@export var dash_speed: float = 320.0
+@export var dash_time: float = 0.16
+## Dashes available. They do NOT come back on landing; treats refill them (refill_dash).
+@export var max_dash_charges: int = 1
+
+## Dashes left right now.
+var dash_charges: int = 1
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
@@ -59,6 +79,23 @@ static func animation_for(current_velocity: Vector2, on_floor: bool) -> StringNa
 
 func get_jump_velocity() -> float:
 	return -2.0 * jump_height / jump_time_to_peak
+
+
+## Upward speed of the double jump: reaches double_jump_height under normal jump gravity.
+func get_double_jump_velocity() -> float:
+	return -sqrt(2.0 * get_jump_gravity() * double_jump_height)
+
+
+## Horizontal distance one dash covers.
+func get_dash_distance() -> float:
+	return dash_speed * dash_time
+
+
+## Gives back all dashes (called by treats).
+func refill_dash() -> void:
+	dash_charges = max_dash_charges
+	dash_charges_changed.emit(dash_charges)
+	dash_refilled.emit()
 
 
 func get_jump_gravity() -> float:
