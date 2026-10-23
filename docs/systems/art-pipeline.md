@@ -7,6 +7,8 @@ All current art is placeholder-quality pixel art drawn by code (no downloaded as
 
 ![[mockups.png]]
 
+The palette is also exported for artists: `docs/art/palette.png` (swatches) and `docs/art/palette.gpl` (import into Aseprite/GIMP/Krita). For the artist-facing version of this note, see [[art-and-sound-brief]].
+
 ## Assets
 | File | Size | Notes |
 |---|---|---|

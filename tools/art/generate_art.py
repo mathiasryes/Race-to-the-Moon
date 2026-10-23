@@ -866,6 +866,21 @@ def asset_sheet() -> Image.Image:
     return out
 
 
+def save_palette() -> None:
+    """Palette files for artists: a swatch image and a GIMP/Aseprite .gpl palette."""
+    names = list(P)
+    cols, size = 9, 24
+    rows = math.ceil(len(names) / cols)
+    img = Image.new("RGBA", (cols * size, rows * size), (255, 255, 255, 0))
+    for i, name in enumerate(names):
+        x, y = (i % cols) * size, (i // cols) * size
+        rect(img, x + 1, y + 1, x + size - 2, y + size - 2, P[name])
+    img.save(PREVIEW / "palette.png")
+    lines = ["GIMP Palette", "Name: Race to the Moon", f"Columns: {cols}", "#"]
+    lines += [f"{c[0]:3d} {c[1]:3d} {c[2]:3d}\t{name}" for name, c in P.items()]
+    (PREVIEW / "palette.gpl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> None:
     make_player()
     make_rocket()
@@ -883,6 +898,7 @@ def main() -> None:
     PREVIEW.mkdir(parents=True, exist_ok=True)
     mockups().save(PREVIEW / "mockups.png")
     asset_sheet().save(PREVIEW / "asset-sheet.png")
+    save_palette()
     print(f"Wrote {len(SAVED)} images to {ART} and previews to {PREVIEW}")
 
 

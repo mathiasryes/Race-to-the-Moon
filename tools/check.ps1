@@ -10,4 +10,7 @@ if ($LASTEXITCODE -ne 0) { Write-Error "Import failed"; exit 1 }
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 & $godot --headless --path $root -s res://tests/framework/race_scenarios.gd
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+& $godot --headless --path $root -s res://tests/framework/sound_scenarios.gd
 exit $LASTEXITCODE
