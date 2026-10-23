@@ -7,16 +7,16 @@ signal jumped
 signal landed
 
 @export_group("Run")
-@export var run_speed: float = 140.0
-@export var ground_acceleration: float = 1200.0
-@export var ground_friction: float = 1400.0
-@export var air_acceleration: float = 800.0
+@export var run_speed: float = 115.0
+@export var ground_acceleration: float = 1000.0
+@export var ground_friction: float = 1200.0
+@export var air_acceleration: float = 700.0
 
 @export_group("Jump")
-## Peak height of a full jump, in pixels.
-@export var jump_height: float = 56.0
-@export var jump_time_to_peak: float = 0.38
-@export var jump_time_to_fall: float = 0.30
+## Peak height of a full jump, in pixels. The level generator spaces platforms from this.
+@export var jump_height: float = 88.0
+@export var jump_time_to_peak: float = 0.45
+@export var jump_time_to_fall: float = 0.36
 ## Fraction of upward speed kept when jump is released early.
 @export var jump_cut_multiplier: float = 0.45
 ## Seconds after leaving a ledge during which a jump still works.

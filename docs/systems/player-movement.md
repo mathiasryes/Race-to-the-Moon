@@ -13,9 +13,9 @@
 ## Key tuning values (exported, editable in the Inspector)
 | Value | Default |
 |---|---|
-| run_speed | 140 px/s |
-| jump_height | 56 px (3.5 tiles) |
-| jump_time_to_peak / to_fall | 0.38 s / 0.30 s |
+| run_speed | 115 px/s |
+| jump_height | 88 px (5.5 tiles) |
+| jump_time_to_peak / to_fall | 0.45 s / 0.36 s |
 | coyote_time | 0.10 s |
 | jump_buffer_time | 0.12 s |
 
@@ -24,7 +24,8 @@
 - The `Camera2D` lives inside the player scene and follows them.
 - Visuals: `AnimatedSprite2D` with `dog_frames.tres` (see [[art-pipeline]]). Collision box is 14x12.
 - Platforms are one-way by default, so the player jumps up through them from below.
-- Platforms in [[game-design]] levels are spaced 48px apart vertically to fit the jump height.
+- The [[level-generation]] spaces platforms from these jump values, so changing them changes every level (and stays beatable).
+- The camera is locked horizontally (limits ±320) since the level is exactly one screen wide.
 
 ## Related
 [[0002-pixel-art-640x360]]
