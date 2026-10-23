@@ -3,7 +3,7 @@
 > Living document. Fill in the open questions as a team; the AI keeps the rest up to date.
 
 ## Pitch
-A 2D vertical platformer. You play the pet (a dog, for now) of an astronaut. The rocket launches without you, so you race it to the moon by climbing.
+A 2D vertical platformer. You play the pet dog (a beagle) of an astronaut. The rocket launches without you, so you race it to the moon by climbing.
 
 ## The race (core mechanic)
 - The rocket flies in the background and moves up/down on screen depending on how fast you climb compared to it.
@@ -32,7 +32,8 @@ Climb → keep ahead of the rocket → avoid hazards → climb higher → reach 
 
 ## Open questions (team to decide)
 - [x] **"Race":** against the owner's rocket (see above).
-- [ ] Which animal is the pet? (dog placeholder for now)
+- [x] Which animal is the pet? **A dog** (beagle, red collar with a gold name tag).
+- [ ] What's the dog's name (and the astronaut's)?
 - [ ] How fast does the rocket go: constant, or speeding up per zone?
 - [ ] One long climb, or separate levels per zone?
 - [ ] What happens on falling: restart level, checkpoint, or just fall down and keep climbing?
