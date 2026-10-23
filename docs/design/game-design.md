@@ -9,6 +9,7 @@ A 2D vertical platformer. You play the pet (a dog, for now) of an astronaut. The
 - The rocket flies in the background and moves up/down on screen depending on how fast you climb compared to it.
 - If the rocket leaves the **top of the screen**, you lose. Works like a rising-lava level, but the pressure comes from above.
 - Starts at the launch pad, ends at the moon.
+- Built: see [[rocket-race]] for how it works and the tuning values.
 
 ## Zones (bottom → top)
 1. **Launch site:** grass and launch pad platforms, launch tower, hills.
@@ -27,6 +28,7 @@ Climb → keep ahead of the rocket → avoid hazards → climb higher → reach 
 |---|---|---|
 | Move | A/D or ←/→ | D-pad / left stick |
 | Jump | Space, W or ↑ (hold for higher jump) | A / Cross |
+| Restart | R or Enter | Start |
 
 ## Open questions (team to decide)
 - [x] **"Race":** against the owner's rocket (see above).

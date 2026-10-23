@@ -8,6 +8,7 @@ Open this `docs/` folder as a vault in Obsidian (*Open folder as vault*). It is 
 ## Systems
 - [[player-movement]] – running, jumping, coyote time, jump buffer
 - [[art-pipeline]] – generated pixel art, every asset, how it's used in Godot
+- [[rocket-race]] – countdown, liftoff, lose when the rocket leaves the screen, win at the moon
 
 ## Decisions
 - [[0001-godot-4]] – Godot 4 over Unity

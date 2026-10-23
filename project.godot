@@ -41,6 +41,10 @@ jump={
 "deadzone": 0.2,
 "events": [Object(InputEventKey,"physical_keycode":32), Object(InputEventKey,"physical_keycode":87), Object(InputEventKey,"physical_keycode":4194320), Object(InputEventJoypadButton,"button_index":0)]
 }
+restart={
+"deadzone": 0.2,
+"events": [Object(InputEventKey,"physical_keycode":82), Object(InputEventKey,"physical_keycode":4194309), Object(InputEventJoypadButton,"button_index":6)]
+}
 
 [rendering]
 

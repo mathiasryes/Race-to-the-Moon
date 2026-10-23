@@ -7,4 +7,7 @@ $root = Split-Path -Parent $PSScriptRoot
 if ($LASTEXITCODE -ne 0) { Write-Error "Import failed"; exit 1 }
 
 & $godot --headless --path $root -s res://tests/framework/run_tests.gd
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+& $godot --headless --path $root -s res://tests/framework/race_scenarios.gd
 exit $LASTEXITCODE
