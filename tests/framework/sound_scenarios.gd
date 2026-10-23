@@ -4,6 +4,7 @@ extends SceneTree
 ## Uses Sound.history, so it works whether or not the audio files exist (headless has no audio output).
 
 const LEVEL := "res://levels/level_01.tscn"
+const LEVEL_SEED := 12345
 
 var _failed: int = 0
 
@@ -15,6 +16,7 @@ func _initialize() -> void:
 func _run() -> void:
 	var sound: Node = root.get_node("Sound")
 	var level: Node = load(LEVEL).instantiate()
+	(level.get_node("LevelGenerator") as LevelGenerator).level_seed = LEVEL_SEED  # same level every run
 	root.add_child(level)
 	var player: Player = level.get_node("Player")
 
@@ -38,8 +40,12 @@ func _run() -> void:
 	player.refill_dash()
 	_check(sound, "a refill (treat) plays the treat sound", &"treat")
 	await _wait(1.5)
-	_check(sound, "landing on the grass floor plays the grass landing", &"land_grass")
-	_check_now(player.is_on_floor(), "player is back on the floor")
+	# Where the dog lands after the jump + double jump + dash depends on the level, so accept any landing
+	# sound here; which surface gives which sound is covered by tests/test_landing_sounds.gd.
+	var landing_sounds: Array = (sound.get("history") as Array).filter(
+		func(name: StringName) -> bool: return String(name).begins_with("land_"))
+	_check_now(not landing_sounds.is_empty(), "landing plays a landing sound (%s)" % ", ".join(landing_sounds))
+	_check_now(player.is_on_floor(), "player has landed")
 
 	await _wait(3.0)
 	_check(sound, "liftoff plays the liftoff sound", &"liftoff")
@@ -58,8 +64,9 @@ func _run() -> void:
 	paused = false
 	level.free()
 	level = load(LEVEL).instantiate()
-	root.add_child(level)
 	var generator: LevelGenerator = level.get_node("LevelGenerator")
+	generator.level_seed = LEVEL_SEED
+	root.add_child(level)
 	player = level.get_node("Player")
 	var route: Array[Vector2] = generator.main_path
 	await _wait(0.1)
