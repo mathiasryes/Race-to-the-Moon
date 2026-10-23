@@ -6,6 +6,7 @@ For whoever makes the art and sound for **Race to the Moon**. Everything you nee
 - A 2D **vertical pixel-art platformer**. You play an astronaut's pet dog. The rocket launches without you, so you **race it to the moon by climbing**.
 - The rocket flies in the background. If it leaves the top of the screen, you lose. Reach the moon first to win.
 - The climb passes through **five regions**: launch site → sky → upper atmosphere → space → moon. Platforms, background and props change per region.
+- The dog can **double jump** and **dash** once. The dash only comes back by eating a **dog treat** floating in the level.
 - Tone: cheerful, slightly silly, arcade-y. Short runs (about a minute), instant restarts.
 
 ![[mockups.png]]
@@ -66,16 +67,18 @@ Previews: `docs/art/asset-sheet.png` (every sprite at 2×) and `docs/art/mockups
 | `props/asteroid_small/medium/large` | 16, 24, 36 px | space props |
 | `props/planet_ringed/red/gas/ice` | various | space props |
 | `props/moon.png` | 132x132 | the goal at the top |
+| `pickups/treat.png` | 4 frames × 14x10 | **dog treat** (bone-shaped biscuit) floating in the level; eating one refills the dash. Frame 1 plain (shown longest), 2-3 a glint sliding across, 4 a sparkle. The game bobs it up and down and pops it when eaten, so draw it still and centred |
+| `ui/dash_icon.png` | 2 frames × 12x12 | dash indicator in the top-left corner (paw print): frame 1 = dash ready, frame 2 = used up (dim). One icon per dash |
 
 ### Changing the animal
 The team may swap the dog for another animal. Keep the same `player/dog.png` layout (8 frames of 24x24, same order, facing right), or tell the coders the new layout. The file can keep its name or be renamed, just say so.
 
 ### Art we don't have yet (wishlist, roughly by priority)
 1. **Better versions of the dog and rocket**: the stars of the show.
-2. **Obstacles per region** (design not final yet): birds (sky), satellites/space junk (upper atmosphere), asteroids and a UFO (space). 2-4 frame animations.
-3. **Landing dust / jump puff** effects (3-4 frames, ~16x16).
+2. **Movement effects** (3-4 frames, ~16x16): landing dust / jump puff, a little air puff under the dog for the **double jump**, a speed trail or streaks for the **dash**, crumbs or sparkles when a **treat** is eaten. A dash pose for the dog (ears back, stretched out) would also help.
+3. **Obstacles per region** (design not final yet): birds (sky), satellites/space junk (upper atmosphere), asteroids and a UFO (space). 2-4 frame animations.
 4. **Title screen / logo** "Race to the Moon".
-5. **UI**: a pixel font (or pick a free one), countdown numbers, warning icon, win/lose screen art.
+5. **UI**: a pixel font (or pick a free one), countdown numbers, warning icon, win/lose screen art, a nicer dash icon.
 6. **Region transitions**: richer clouds layer, aurora or atmosphere glow between sky and space.
 
 ---
@@ -98,6 +101,9 @@ Drop files into these folders with **exactly these names**. They play automatica
 |---|---|---|---|
 | `jump` | sfx | the dog jumps | very frequent: short (< 0.2 s), light. Pitch varies slightly each time automatically |
 | `land` | sfx | the dog lands | very frequent: soft and short |
+| `double_jump` | sfx | the dog jumps again in mid-air | like `jump` but higher/lighter so the two are easy to tell apart; short (< 0.15 s) |
+| `dash` | sfx | the dog dashes sideways | quick whoosh/swish, ~0.2 s |
+| `treat` | sfx | the dog eats a treat (dash refilled) | happy, rewarding chime or crunch, < 0.3 s |
 | `countdown_beep` | sfx | 3, 2, 1 before liftoff | one beep per second |
 | `liftoff` | sfx | rocket ignites | big moment: rumble/whoosh, 1-2 s |
 | `rocket_engine` | loops | the whole time the rocket flies | must loop **seamlessly**; steady rumble, not too loud (plays for a minute) |

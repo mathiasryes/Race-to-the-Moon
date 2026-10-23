@@ -28,12 +28,16 @@ The palette is also exported for artists: `docs/art/palette.png` (swatches) and 
 | `props/satellite.png`, `ufo.png` (2 frames 34x18), `spaceship.png` | | space zone |
 | `props/asteroid_small/medium/large.png` | | space zone |
 | `props/planet_ringed/red/gas/ice.png`, `moon.png` (132x132) | | space zone, moon = goal |
+| `pickups/treat.png` | 4 frames of 14x10 | dog biscuit (bone). 0 = plain, 1-2 = glint sliding across, 3 = sparkle. Used by `levels/pickups/treat_frames.tres` |
+| `ui/dash_icon.png` | 2 frames of 12x12 | paw print for the dash HUD: 0 = dash ready (gold), 1 = used (grey) |
 
 ## How it is used in Godot
 - **Player:** `AnimatedSprite2D` with `dog_frames.tres`; `Player.animation_for()` picks idle/run/jump/fall, sprite flips when moving left.
 - **Platforms:** `levels/blocks/platform.tscn` (`Platform`, a `@tool` script). Set `zone`, `width_tiles` and `one_way` in the Inspector; the tiles and collision update in the editor. Origin = centre of the top surface.
 - **Background:** `levels/background/altitude_background.gd` in a `CanvasLayer` (layer -10). It reads the camera height and shows sky → stars → curved Earth. `climb_height` = pixels until full space (level_01 uses 360 to demo the whole transition; real levels a few thousand).
 - **Rocket:** `rocket/rocket.tscn`, origin at the nozzle; `engine_on` toggles the animated flame. Visual only so far.
+- **Treats:** `levels/pickups/treat.tscn` (`Treat`, Area2D, origin = treat centre). `AnimatedSprite2D` plays `shine` (long pause on the plain frame, then glint and sparkle); only the sprite bobs (`bob_height`, whole pixels). On pickup the collision switches off at once and the sprite pops (scale up, rise, fade) before the node frees itself.
+- **Dash HUD:** `ui/race_hud.gd` builds one `TextureRect` per `Player.max_dash_charges` in the `DashIndicator` box (top-left) from `dash_icon.png`; full/empty follows `dash_charges_changed`, and `dash_refilled` gives a short flash + scale pop. Needs the HUD's `player` export set; hidden without it.
 - **Decor:** loose `Sprite2D` props under a `Decor` node with `z_index = -1`.
 
 ## Checking the look

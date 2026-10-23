@@ -85,6 +85,15 @@ def main() -> None:
         siren.append(math.sin(phase * math.tau))
     write("loops/warning_alarm.wav", siren)
 
+    # Added later; kept last so the sounds above still come out identical (they share the seeded random).
+    write("sfx/double_jump.wav", tone(lambda t: 520 + 700 * t, 0.1, "square"))  # a higher, quicker jump blip
+    whoosh, v, n = [], 0.0, int(0.22 * RATE)
+    for i in range(n):  # noise that brightens then darkens again: a quick swish
+        t = i / n
+        v += (rnd.uniform(-1, 1) - v) * (0.04 + 0.5 * math.sin(t * math.pi) ** 2)
+        whoosh.append(v * math.sin(t * math.pi) ** 1.5)
+    write("sfx/dash.wav", whoosh)
+    write("sfx/treat.wav", tone(lambda t: 987.77, 0.07, release=0.02) + tone(lambda t: 1318.51, 0.18, release=0.12))
 
 if __name__ == "__main__":
     main()
