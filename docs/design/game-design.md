@@ -28,7 +28,17 @@ Climb → keep ahead of the rocket → avoid hazards → climb higher → reach 
 |---|---|---|
 | Move | A/D or ←/→ | D-pad / left stick |
 | Jump | Space, W or ↑ (hold for higher jump) | A / Cross |
+| Double jump | Jump again in the air (once per jump) | A / Cross |
+| Dash | Shift, X or K | X / Square |
 | Restart | R or Enter | Start |
+
+## Movement and treats
+- **Double jump:** one extra jump in the air, back every time you land.
+- **Dash:** a quick horizontal burst. You start with **one**. It does **not** come back on landing.
+- **Dog treats** are scattered around the level. Grabbing one **refills the dash**. Many sit on dead ends or spots only a dash can reach, so detours are a gamble against the rocket.
+
+## Level feel
+The climb should feel like **finding your own way up**, not following a corridor: forks that rejoin, dead ends, platforms you can't reach, and dash-only shortcuts. See [[level-generation]].
 
 ## Open questions (team to decide)
 - [x] **"Race":** against the owner's rocket (see above).
