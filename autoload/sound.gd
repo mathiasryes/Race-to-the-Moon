@@ -43,6 +43,11 @@ const PITCH_VARIATION: Dictionary = {
 	&"jump": 0.06, &"double_jump": 0.04, &"dash": 0.05,
 	&"land_grass": 0.08, &"land_metal": 0.08, &"land_cloud": 0.08, &"land_rock": 0.08, &"land_heavy": 0.05,
 }
+## Per-sound volume in dB (0 = as recorded). Use this to balance single sounds; use the buses for whole groups.
+const VOLUME_DB: Dictionary = {
+	&"rocket_engine": -8.0,
+	&"liftoff": -5.0,
+}
 ## Volume range for loops whose loudness follows a 0..1 amount (see set_loop_amount).
 const QUIET_DB: float = -18.0
 
@@ -101,6 +106,7 @@ func play(sound: StringName) -> bool:
 	voice.stream = stream
 	var variation: float = PITCH_VARIATION.get(sound, 0.0)
 	voice.pitch_scale = 1.0 + randf_range(-variation, variation)
+	voice.volume_db = volume_for(sound)
 	voice.play()
 	return true
 
@@ -123,7 +129,7 @@ func set_loop(sound: StringName, on: bool) -> void:
 			player = _new_player(&"SFX")
 			_loops[sound] = player
 		player.stream = _looping(stream)
-		player.volume_db = 0.0
+		player.volume_db = volume_for(sound)
 		player.play()
 	else:
 		_active_loops.erase(sound)
@@ -134,7 +140,12 @@ func set_loop(sound: StringName, on: bool) -> void:
 ## Loudness of a running loop from 0 (quiet) to 1 (full volume).
 func set_loop_amount(sound: StringName, amount: float) -> void:
 	if _loops.has(sound):
-		(_loops[sound] as AudioStreamPlayer).volume_db = lerpf(QUIET_DB, 0.0, clampf(amount, 0.0, 1.0))
+		(_loops[sound] as AudioStreamPlayer).volume_db = volume_for(sound) + lerpf(QUIET_DB, 0.0, clampf(amount, 0.0, 1.0))
+
+
+## Base volume of a sound in dB (see VOLUME_DB).
+static func volume_for(sound: StringName) -> float:
+	return VOLUME_DB.get(sound, 0.0)
 
 
 func is_looping(sound: StringName) -> bool:
@@ -162,7 +173,7 @@ func play_music(track: StringName, fade_time: float = 0.0) -> void:
 		stream = _stream("music", track)
 	if stream != null and not _silent:
 		_music.stream = _looping(stream)
-		_music.volume_db = SILENT_DB if fade_time > 0.0 else 0.0
+		_music.volume_db = SILENT_DB if fade_time > 0.0 else volume_for(track)
 		_music.play()
 
 	if fade_time <= 0.0 or not (_music.playing or _music_fading.playing):
@@ -170,7 +181,7 @@ func play_music(track: StringName, fade_time: float = 0.0) -> void:
 		return
 	_music_tween = create_tween().set_parallel()
 	if _music.playing:
-		_music_tween.tween_property(_music, ^"volume_db", 0.0, fade_time)
+		_music_tween.tween_property(_music, ^"volume_db", volume_for(track), fade_time)
 	if _music_fading.playing:
 		_music_tween.tween_property(_music_fading, ^"volume_db", SILENT_DB, fade_time)
 		_music_tween.chain().tween_callback(_music_fading.stop)

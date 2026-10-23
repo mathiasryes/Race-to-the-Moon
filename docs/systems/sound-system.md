@@ -9,7 +9,8 @@
 - Names are listed in `SFX`, `LOOPS`, `MUSIC` in `sound.gd`. Unknown names log a warning.
 - API: `Sound.play(name)`, `Sound.set_loop(name, on)`, `Sound.set_loop_amount(name, 0..1)`, `Sound.play_music(name, fade_time)` (crossfades when `fade_time` > 0), `Sound.current_music()`, `Sound.stop_all()`, `Sound.release_all()`.
 - One-shots use a pool of 8 players; jump, land, double_jump and dash get slight random pitch. Music and loops are forced to loop whatever the file format.
-- **Buses:** Master → `Music` (-6 dB) and `SFX`. Balance in the editor's Audio tab.
+- **Buses:** Master → `Music` (0 dB) and `SFX`. Balance in the editor's Audio tab.
+- **Single sounds:** `VOLUME_DB` in `sound.gd` turns individual sounds up or down (the rocket: engine loop -8 dB, liftoff -5 dB).
 - Keeps playing while the game is paused (win/lose screens).
 - **Headless** (tests/CI) has no audio device: `Sound` records what would play in `Sound.history` and tracks loops, but starts no audio.
 

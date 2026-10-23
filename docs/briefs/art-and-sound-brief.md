@@ -128,7 +128,7 @@ Ideas for later (tell the coders and they'll add the hooks): music per region (l
 - Trim silence at the start of effects so they feel instant.
 - Peak around **-1 dBFS**; keep effects at similar loudness to each other.
 - Loops must loop **without a click**: start and end at matching points.
-- Overall balance is done in Godot's **Audio** tab (bottom panel), which has **Music** and **SFX** volume sliders. Music starts at -6 dB.
+- Overall balance is done in Godot's **Audio** tab (bottom panel), which has **Music** and **SFX** volume sliders. Music plays at full volume (0 dB). Single sounds can be turned up or down in code (the rocket engine and liftoff are turned down a bit), so don't worry about matching their loudness exactly.
 
 ---
 
