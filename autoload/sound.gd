@@ -9,9 +9,14 @@ extends Node
 
 const SFX: Dictionary = {
 	&"jump": "player leaves the ground",
-	&"land": "player lands on a platform",
+	&"land_grass": "player lands on grass (also the fallback for unknown surfaces)",
+	&"land_metal": "player lands on a launch pad, girder or solar panel",
+	&"land_cloud": "player lands on a cloud",
+	&"land_rock": "player lands on an asteroid or moon rock",
+	&"land_heavy": "player lands after a long fall (more than a full double jump), any surface",
 	&"double_jump": "player jumps again in mid-air",
-	&"dash": "player dashes sideways",
+	&"dash": "player dashes (any of 8 directions)",
+	&"woof": "the dog barks as the rocket lifts off without it",
 	&"treat": "player picks up a dog treat (dash refilled)",
 	&"countdown_beep": "each second of the countdown (3, 2, 1)",
 	&"liftoff": "the rocket ignites",
@@ -24,14 +29,25 @@ const LOOPS: Dictionary = {
 	&"warning_alarm": "while the warning shows; louder as the rocket gets closer to escaping",
 }
 const MUSIC: Dictionary = {
-	&"race": "music during the climb",
+	&"below_atmosphere": "climb music from the launch pad up through the atmosphere (\"Stellar Ascent\")",
+	&"above_atmosphere": "climb music once in space (\"Vector Ascent\")",
 }
 
 const AUDIO_DIR := "res://assets/audio"
-const EXTENSIONS: Array[String] = ["ogg", "wav"]
+const EXTENSIONS: Array[String] = ["ogg", "wav", "mp3"]
+## Volume a crossfading track starts from / fades to.
+const SILENT_DB: float = -40.0
 const VOICES: int = 8
 ## Random pitch change for these effects so repeats don't sound identical.
-const PITCH_VARIATION: Dictionary = {&"jump": 0.06, &"land": 0.08, &"double_jump": 0.04, &"dash": 0.05}
+const PITCH_VARIATION: Dictionary = {
+	&"jump": 0.06, &"double_jump": 0.04, &"dash": 0.05,
+	&"land_grass": 0.08, &"land_metal": 0.08, &"land_cloud": 0.08, &"land_rock": 0.08, &"land_heavy": 0.05,
+}
+## Per-sound volume in dB (0 = as recorded). Use this to balance single sounds; use the buses for whole groups.
+const VOLUME_DB: Dictionary = {
+	&"rocket_engine": -8.0,
+	&"liftoff": -5.0,
+}
 ## Volume range for loops whose loudness follows a 0..1 amount (see set_loop_amount).
 const QUIET_DB: float = -18.0
 
@@ -44,7 +60,9 @@ var _voices: Array[AudioStreamPlayer] = []
 var _next_voice: int = 0
 var _loops: Dictionary = {}  # StringName -> AudioStreamPlayer
 var _active_loops: Dictionary = {}  # StringName -> true while the loop is on
-var _music: AudioStreamPlayer
+var _music: AudioStreamPlayer  # the current track
+var _music_fading: AudioStreamPlayer  # the previous track while it fades out
+var _music_tween: Tween
 var _music_name: StringName = &""
 var _streams: Dictionary = {}  # cache: "folder/name" -> AudioStream (or null when there's no file)
 
@@ -54,6 +72,21 @@ func _ready() -> void:
 	for i: int in VOICES:
 		_voices.append(_new_player(&"SFX"))
 	_music = _new_player(&"Music")
+	_music_fading = _new_player(&"Music")
+	# Close the window ourselves so playing audio can be released first (otherwise Godot reports leaks).
+	get_tree().set_auto_accept_quit(false)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		_quit_cleanly()
+
+
+func _quit_cleanly() -> void:
+	release_all()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	get_tree().quit()
 
 
 func _exit_tree() -> void:
@@ -64,7 +97,10 @@ func _exit_tree() -> void:
 ## frames first, so the audio engine can let go of the sounds (otherwise Godot reports them as leaks).
 func release_all() -> void:
 	_active_loops.clear()
-	for player: AudioStreamPlayer in _voices + _loops.values() + [_music]:
+	if _music_tween:
+		_music_tween.kill()
+	_music_name = &""
+	for player: AudioStreamPlayer in _voices + _loops.values() + [_music, _music_fading]:
 		player.stop()
 		player.stream = null
 	_streams.clear()
@@ -84,6 +120,7 @@ func play(sound: StringName) -> bool:
 	voice.stream = stream
 	var variation: float = PITCH_VARIATION.get(sound, 0.0)
 	voice.pitch_scale = 1.0 + randf_range(-variation, variation)
+	voice.volume_db = volume_for(sound)
 	voice.play()
 	return true
 
@@ -106,7 +143,7 @@ func set_loop(sound: StringName, on: bool) -> void:
 			player = _new_player(&"SFX")
 			_loops[sound] = player
 		player.stream = _looping(stream)
-		player.volume_db = 0.0
+		player.volume_db = volume_for(sound)
 		player.play()
 	else:
 		_active_loops.erase(sound)
@@ -117,27 +154,55 @@ func set_loop(sound: StringName, on: bool) -> void:
 ## Loudness of a running loop from 0 (quiet) to 1 (full volume).
 func set_loop_amount(sound: StringName, amount: float) -> void:
 	if _loops.has(sound):
-		(_loops[sound] as AudioStreamPlayer).volume_db = lerpf(QUIET_DB, 0.0, clampf(amount, 0.0, 1.0))
+		(_loops[sound] as AudioStreamPlayer).volume_db = volume_for(sound) + lerpf(QUIET_DB, 0.0, clampf(amount, 0.0, 1.0))
+
+
+## Base volume of a sound in dB (see VOLUME_DB).
+static func volume_for(sound: StringName) -> float:
+	return VOLUME_DB.get(sound, 0.0)
 
 
 func is_looping(sound: StringName) -> bool:
 	return _active_loops.has(sound)
 
 
-## Plays a music track (keeps going if it's already playing). An empty name stops the music.
-func play_music(track: StringName) -> void:
-	if track == _music_name and _music.playing:
+## Plays a music track (keeps going if it's already the current one). An empty name stops the music.
+## With `fade_time` > 0 the old track fades out while the new one fades in (a crossfade).
+func play_music(track: StringName, fade_time: float = 0.0) -> void:
+	if track == _music_name:
 		return
-	_music.stop()
 	_music_name = track
-	if track == &"":
-		return
-	_check_known(track, MUSIC)
-	_remember(track)
-	var stream: AudioStream = _stream("music", track)
+	if _music_tween:
+		_music_tween.kill()
+	_music_fading.stop()
+	# The current track becomes the fading one; the other player takes the new track.
+	var previous: AudioStreamPlayer = _music
+	_music = _music_fading
+	_music_fading = previous
+
+	var stream: AudioStream = null
+	if track != &"":
+		_check_known(track, MUSIC)
+		_remember(track)
+		stream = _stream("music", track)
 	if stream != null and not _silent:
 		_music.stream = _looping(stream)
+		_music.volume_db = SILENT_DB if fade_time > 0.0 else volume_for(track)
 		_music.play()
+
+	if fade_time <= 0.0 or not (_music.playing or _music_fading.playing):
+		_music_fading.stop()
+		return
+	_music_tween = create_tween().set_parallel()
+	if _music.playing:
+		_music_tween.tween_property(_music, ^"volume_db", volume_for(track), fade_time)
+	if _music_fading.playing:
+		_music_tween.tween_property(_music_fading, ^"volume_db", SILENT_DB, fade_time)
+		_music_tween.chain().tween_callback(_music_fading.stop)
+
+
+func current_music() -> StringName:
+	return _music_name
 
 
 ## Stops loops and music, e.g. when the race ends or the level restarts.

@@ -92,35 +92,43 @@ Drop files into these folders with **exactly these names**. They play automatica
 |---|---|---|
 | `assets/audio/sfx/` | `.wav` (preferred) or `.ogg` | short one-shot effects |
 | `assets/audio/loops/` | `.ogg` or `.wav` | sounds that loop while something lasts |
-| `assets/audio/music/` | `.ogg` (preferred) or `.wav` | music, loops automatically |
+| `assets/audio/music/` | `.ogg`, `.mp3` or `.wav` | music, loops automatically |
 
-**Placeholder bleeps** are already in `sfx/` and `loops/` so you can hear where each sound goes. Replace them with your own files (same name; if you switch to `.ogg`, delete the `.wav`).
+**Placeholder bleeps** fill in any sound that isn't made yet, so you can hear where each sound goes. Replace them with your own files (same name; if you switch to `.ogg`, delete the `.wav`). The placeholder script never overwrites existing files.
 
 ### Sound list
-| Name | Folder | When it plays | Notes |
-|---|---|---|---|
-| `jump` | sfx | the dog jumps | very frequent: short (< 0.2 s), light. Pitch varies slightly each time automatically |
-| `land` | sfx | the dog lands | very frequent: soft and short |
-| `double_jump` | sfx | the dog jumps again in mid-air | like `jump` but higher/lighter so the two are easy to tell apart; short (< 0.15 s) |
-| `dash` | sfx | the dog dashes sideways | quick whoosh/swish, ~0.2 s |
-| `treat` | sfx | the dog eats a treat (dash refilled) | happy, rewarding chime or crunch, < 0.3 s |
-| `countdown_beep` | sfx | 3, 2, 1 before liftoff | one beep per second |
-| `liftoff` | sfx | rocket ignites | big moment: rumble/whoosh, 1-2 s |
-| `rocket_engine` | loops | the whole time the rocket flies | must loop **seamlessly**; steady rumble, not too loud (plays for a minute) |
-| `warning` | sfx | the rocket starts getting away | short alert, plays once when the warning appears |
-| `warning_alarm` | loops | while the warning shows | seamless loop. The game makes it **louder the closer** the rocket is to escaping |
-| `win` | sfx | reached the moon first | happy jingle, 1-3 s |
-| `lose` | sfx | the rocket escaped | "aww" jingle, 1-3 s |
-| `race` | music | during the climb | upbeat, seamless loop, ~1-2 min |
+**Status:** ✅ = real sound in the game (first delivery, 2026-10-23) · 🔲 = still a placeholder.
 
-Ideas for later (tell the coders and they'll add the hooks): music per region (launch / sky / space), menu music, UI clicks, obstacle hits, dog barks or whines, ambient wind in the sky, quiet space ambience.
+| Name | Folder | When it plays | Notes | Status |
+|---|---|---|---|---|
+| `jump` | sfx | the dog jumps | very frequent: short (< 0.2 s), light. Pitch varies slightly each time automatically | ✅ |
+| `land_grass` | sfx | the dog lands on grass (and anything without its own sound) | very frequent: soft and short | ✅ |
+| `land_metal` | sfx | lands on a launch pad, girder or solar panel | short clank | ✅ |
+| `land_cloud` | sfx | lands on a cloud | soft puff | ✅ |
+| `land_rock` | sfx | lands on an asteroid or moon rock | short crunch | ✅ |
+| `land_heavy` | sfx | lands after a long fall (more than ~160 px), any surface | bigger thud | ✅ |
+| `double_jump` | sfx | the dog jumps again in mid-air | like `jump` but higher/lighter so the two are easy to tell apart; short (< 0.15 s) | ✅ |
+| `dash` | sfx | the dog dashes (any of 8 directions) | quick whoosh/swish, ~0.2-0.3 s | ✅ |
+| `treat` | sfx | the dog eats a treat (dash refilled) | happy, rewarding chime or crunch, < 0.3 s (delivered as `pickup_snack.wav`) | ✅ |
+| `woof` | sfx | the dog barks just after liftoff, as the rocket leaves without it | short bark | ✅ |
+| `countdown_beep` | sfx | 3, 2, 1 before liftoff | one beep per second | 🔲 |
+| `liftoff` | sfx | rocket ignites | big moment: rumble/whoosh, 1-4 s | ✅ |
+| `rocket_engine` | loops | the whole time the rocket flies | must loop **seamlessly**; steady rumble, not too loud (plays for a minute) | ✅ |
+| `warning` | sfx | the rocket starts getting away | short alert, plays once when the warning appears | 🔲 |
+| `warning_alarm` | loops | while the warning shows | seamless loop. The game makes it **louder the closer** the rocket is to escaping | 🔲 |
+| `win` | sfx | reached the moon first | happy jingle, 1-4 s | ✅ |
+| `lose` | sfx | the rocket escaped | "aww" jingle, 1-3 s | ✅ |
+| `below_atmosphere` | music | from the launch pad up through the atmosphere (first 60% of the climb) | "Stellar Ascent", loops; `.mp3` is fine | ✅ |
+| `above_atmosphere` | music | once in space (last 40%), crossfades in over ~2 s | "Vector Ascent", loops; `.mp3` is fine | ✅ |
+
+Ideas for later (tell the coders and they'll add the hooks): music per region (launch / sky / space), menu music, UI clicks, obstacle hits, more barks or whines (e.g. on losing), ambient wind in the sky, quiet space ambience.
 
 ### Audio specs
 - **44.1 kHz**, 16-bit. Mono is fine for effects, stereo for music.
 - Trim silence at the start of effects so they feel instant.
 - Peak around **-1 dBFS**; keep effects at similar loudness to each other.
 - Loops must loop **without a click**: start and end at matching points.
-- Overall balance is done in Godot's **Audio** tab (bottom panel), which has **Music** and **SFX** volume sliders. Music starts at -6 dB.
+- Overall balance is done in Godot's **Audio** tab (bottom panel), which has **Music** and **SFX** volume sliders. Music plays at full volume (0 dB). Single sounds can be turned up or down in code (the rocket engine and liftoff are turned down a bit), so don't worry about matching their loudness exactly.
 
 ---
 
