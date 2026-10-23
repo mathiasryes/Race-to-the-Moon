@@ -5,6 +5,10 @@ extends Node
 
 @export var player: Player
 @export var director: RaceDirector
+## Falls longer than this (pixels) play the heavy landing instead of the surface sound.
+@export var heavy_landing_height: float = 160.0
+## Delay after liftoff before the dog barks at the departing rocket.
+@export var woof_delay: float = 0.6
 
 var _in_danger: bool = false
 
@@ -13,7 +17,7 @@ func _ready() -> void:
 	Sound.stop_all()  # a restart shouldn't keep the previous run's loops going
 	if player:
 		player.jumped.connect(Sound.play.bind(&"jump"))
-		player.landed.connect(Sound.play.bind(&"land"))
+		player.landed.connect(_on_landed)
 		player.double_jumped.connect(Sound.play.bind(&"double_jump"))
 		player.dashed.connect(Sound.play.bind(&"dash"))
 		player.dash_refilled.connect(Sound.play.bind(&"treat"))
@@ -35,9 +39,28 @@ func _on_countdown_changed(seconds_left: int) -> void:
 		Sound.play(&"countdown_beep")
 
 
+## Landing sound for a surface (a Platform.Zone, or -1 if unknown) after falling `fall_height` pixels.
+static func landing_sound(zone: int, fall_height: float, heavy_height: float) -> StringName:
+	if fall_height > heavy_height:
+		return &"land_heavy"
+	match zone:
+		Platform.Zone.LAUNCHPAD, Platform.Zone.GIRDER, Platform.Zone.SOLAR:
+			return &"land_metal"
+		Platform.Zone.CLOUD:
+			return &"land_cloud"
+		Platform.Zone.ASTEROID, Platform.Zone.MOON:
+			return &"land_rock"
+	return &"land_grass"
+
+
+func _on_landed() -> void:
+	Sound.play(landing_sound(player.floor_zone(), player.last_fall_height, heavy_landing_height))
+
+
 func _on_lifted_off() -> void:
 	Sound.play(&"liftoff")
 	Sound.set_loop(&"rocket_engine", true)
+	get_tree().create_timer(woof_delay).timeout.connect(Sound.play.bind(&"woof"))
 
 
 func _on_danger_changed(amount: float) -> void:

@@ -19,7 +19,9 @@ Gameplay code only emits signals; `RaceSounds` (a node in the level) maps them t
 | Signal | Sound |
 |---|---|
 | level starts | music `race` |
-| `Player.jumped` / `Player.landed` | `jump` / `land` |
+| `Player.jumped` | `jump` |
+| `Player.landed` | by surface (`Player.floor_zone()`): grass → `land_grass`, launch pad/girder/solar → `land_metal`, cloud → `land_cloud`, asteroid/moon → `land_rock`; a fall longer than `heavy_landing_height` (160 px, `Player.last_fall_height`) → `land_heavy`. See `RaceSounds.landing_sound()` |
+| `RaceDirector.lifted_off` (+ `woof_delay` 0.6 s) | `woof` |
 | `Player.double_jumped` / `Player.dashed` | `double_jump` / `dash` |
 | `Player.dash_refilled` (a treat was eaten) | `treat` |
 | `RaceDirector.countdown_changed` | `countdown_beep` |

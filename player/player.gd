@@ -49,6 +49,9 @@ var dash_charges: int = 1
 var air_jumps_left: int = 1
 ## 1.0 = facing right, -1.0 = facing left. Used when dashing with no direction held.
 var facing: float = 1.0
+## How far the last landing dropped from the highest point of that time in the air, in pixels.
+var last_fall_height: float = 0.0
+var _air_top_y: float = 0.0
 
 var _coyote_timer: float = 0.0
 var _jump_buffer_timer: float = 0.0
@@ -89,10 +92,26 @@ func _physics_process(delta: float) -> void:
 		velocity.x = next_horizontal_speed(velocity.x, direction, delta, is_on_floor())
 
 	move_and_slide()
+	_air_top_y = global_position.y if _was_on_floor else minf(_air_top_y, global_position.y)
 	if is_on_floor() and not _was_on_floor:
+		last_fall_height = fall_height(_air_top_y, global_position.y)
 		landed.emit()
 	_was_on_floor = is_on_floor()
 	_update_animation()
+
+
+## Drop from the highest point in the air (`top_y`) to where the dog landed. Never negative (y grows downward).
+static func fall_height(top_y: float, landed_y: float) -> float:
+	return maxf(landed_y - top_y, 0.0)
+
+
+## The Platform.Zone the dog is standing on, or -1 if it isn't on a Platform.
+func floor_zone() -> int:
+	for i: int in get_slide_collision_count():
+		var collision: KinematicCollision2D = get_slide_collision(i)
+		if collision.get_normal().y < -0.5 and collision.get_collider() is Platform:
+			return int((collision.get_collider() as Platform).zone)
+	return -1
 
 
 ## Which animation in dog_frames.tres fits the current movement.

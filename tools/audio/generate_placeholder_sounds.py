@@ -2,8 +2,8 @@
 
 Run from the repo root:  python tools/audio/generate_placeholder_sounds.py
 Writes .wav files to assets/audio/sfx/ and assets/audio/loops/. No dependencies beyond Python.
-These are meant to be replaced by real sounds: drop a file with the same name (.wav or .ogg) in its place
-and delete the placeholder. Don't re-run this script after that, or it will overwrite the real sounds.
+These are meant to be replaced by real sounds: drop a file with the same name (.wav or .ogg) in its place.
+Only missing sounds are written, so re-running never overwrites real sounds (delete a file to regenerate it).
 """
 from __future__ import annotations
 
@@ -20,6 +20,9 @@ RATE = 44100
 
 def write(rel: str, samples: list[float]) -> None:
     path = AUDIO / rel
+    if path.exists() or path.with_suffix(".ogg").exists():
+        print(f"kept {path.relative_to(ROOT)} (already exists)")
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     peak = max(1e-9, max(abs(s) for s in samples))
     scale = 0.5 / peak  # normalise every placeholder to the same peak level
@@ -61,7 +64,9 @@ def noise(seconds: float, rnd: random.Random, smooth: float) -> list[float]:
 def main() -> None:
     rnd = random.Random(1)
     write("sfx/jump.wav", tone(lambda t: 300 + 500 * t, 0.12, "square"))
-    write("sfx/land.wav", [s * envelope(i, 3500, release=0.06) for i, s in enumerate(noise(0.08, rnd, 0.05))])
+    landing = noise(0.08, rnd, 0.05)  # always generated so the random sequence for later sounds stays the same
+    for surface in ("grass", "metal", "cloud", "rock", "heavy"):
+        write(f"sfx/land_{surface}.wav", [s * envelope(i, 3500, release=0.06) for i, s in enumerate(landing)])
     write("sfx/countdown_beep.wav", tone(lambda t: 880, 0.15))
     rumble = noise(1.4, rnd, 0.02)
     write("sfx/liftoff.wav", [s * min(1.0, i / (RATE * 0.3)) * envelope(i, len(rumble), release=0.5)

@@ -9,9 +9,14 @@ extends Node
 
 const SFX: Dictionary = {
 	&"jump": "player leaves the ground",
-	&"land": "player lands on a platform",
+	&"land_grass": "player lands on grass (also the fallback for unknown surfaces)",
+	&"land_metal": "player lands on a launch pad, girder or solar panel",
+	&"land_cloud": "player lands on a cloud",
+	&"land_rock": "player lands on an asteroid or moon rock",
+	&"land_heavy": "player lands after a long fall (more than a full double jump), any surface",
 	&"double_jump": "player jumps again in mid-air",
-	&"dash": "player dashes sideways",
+	&"dash": "player dashes (any of 8 directions)",
+	&"woof": "the dog barks as the rocket lifts off without it",
 	&"treat": "player picks up a dog treat (dash refilled)",
 	&"countdown_beep": "each second of the countdown (3, 2, 1)",
 	&"liftoff": "the rocket ignites",
@@ -31,7 +36,10 @@ const AUDIO_DIR := "res://assets/audio"
 const EXTENSIONS: Array[String] = ["ogg", "wav"]
 const VOICES: int = 8
 ## Random pitch change for these effects so repeats don't sound identical.
-const PITCH_VARIATION: Dictionary = {&"jump": 0.06, &"land": 0.08, &"double_jump": 0.04, &"dash": 0.05}
+const PITCH_VARIATION: Dictionary = {
+	&"jump": 0.06, &"double_jump": 0.04, &"dash": 0.05,
+	&"land_grass": 0.08, &"land_metal": 0.08, &"land_cloud": 0.08, &"land_rock": 0.08, &"land_heavy": 0.05,
+}
 ## Volume range for loops whose loudness follows a 0..1 amount (see set_loop_amount).
 const QUIET_DB: float = -18.0
 

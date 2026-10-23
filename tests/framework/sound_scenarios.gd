@@ -38,11 +38,12 @@ func _run() -> void:
 	player.refill_dash()
 	_check(sound, "a refill (treat) plays the treat sound", &"treat")
 	await _wait(1.5)
-	_check(sound, "landing plays the land sound", &"land")
+	_check(sound, "landing on the grass floor plays the grass landing", &"land_grass")
 	_check_now(player.is_on_floor(), "player is back on the floor")
 
 	await _wait(3.0)
 	_check(sound, "liftoff plays the liftoff sound", &"liftoff")
+	_check(sound, "the dog barks at the departing rocket", &"woof")
 	_check_now(sound.call("is_looping", &"rocket_engine"), "rocket engine loop runs after liftoff")
 
 	while not paused:
