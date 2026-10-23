@@ -8,7 +8,8 @@ Playtest feedback: the map felt empty and the route felt forced, "like a path" i
 ## Decision
 - **Levels:** denser platforms with forks that rejoin, dead ends, unreachable platforms and dash-only spots. The guaranteed route needs jump + double jump only, never the dash.
 - **Double jump:** one air jump, restored on landing.
-- **Dash:** horizontal burst, **one charge at the start, not restored on landing**. **Dog treats** refill it.
+- **Dash:** an ~82 px burst in **8 directions aimed with the movement keys** (W/S aim up/down, so jump is Space only), **one charge at the start, not restored on landing**. **Dog treats** refill it.
+- **Difficulty (second playtest: "very easy with the double jump", "less platforms"):** ~100 platforms per level instead of ~175, and about half the route's steps need the double jump.
 
 ## Why
 - Dead ends and unreachable platforms make the level read as a place to explore instead of a corridor.
