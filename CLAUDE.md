@@ -20,7 +20,8 @@ Keep this file short: rules and pointers only. Design notes, decisions and logs 
 - `docs/`: Obsidian vault (Godot ignores it via `.gdignore`). `tools/`: helper scripts.
 
 ## Commands
-- Run all checks (import + tests): `pwsh tools/check.ps1` on Windows, `tools/check.sh` on macOS/Linux. Uses `$GODOT` or `godot` on PATH.
+- Run all checks (import + tests + race scenarios): `pwsh tools/check.ps1` on Windows, `tools/check.sh` on macOS/Linux. Uses `$GODOT` or `godot` on PATH.
+- See the game without playing: `godot --path . -s res://tests/framework/capture_screenshots.gd` (opens a window briefly) saves screenshots to `builds/screenshots/`.
 - Run the game headless briefly to catch load errors: `godot --headless --path . --quit-after 120`
 - **Always run the checks before saying a task is done**, and add or update a test in `tests/` for any gameplay logic you change.
 

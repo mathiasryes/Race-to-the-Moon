@@ -11,6 +11,9 @@
 [ext_resource type="Texture2D" path="res://assets/art/props/hot_air_balloon.png" id="9_balloon"]
 [ext_resource type="Texture2D" path="res://assets/art/props/planet_ringed.png" id="10_planet"]
 [ext_resource type="Texture2D" path="res://assets/art/props/satellite.png" id="11_satellite"]
+[ext_resource type="Script" path="res://levels/race/race_director.gd" id="12_director"]
+[ext_resource type="PackedScene" path="res://levels/race/goal.tscn" id="13_goal"]
+[ext_resource type="PackedScene" path="res://ui/race_hud.tscn" id="14_hud"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall"]
 size = Vector2(16, 1200)
@@ -113,4 +116,15 @@ position = Vector2(50, -384)
 zone = 6
 width_tiles = 5
 
+[node name="Goal" parent="." instance=ExtResource("13_goal")]
+position = Vector2(50, -384)
+
 [node name="Player" parent="." instance=ExtResource("1_player")]
+
+[node name="RaceDirector" type="Node" parent="." node_paths=PackedStringArray("rocket", "goal")]
+script = ExtResource("12_director")
+rocket = NodePath("../Decor/Rocket")
+goal = NodePath("../Goal")
+
+[node name="RaceHud" parent="." node_paths=PackedStringArray("director") instance=ExtResource("14_hud")]
+director = NodePath("../RaceDirector")

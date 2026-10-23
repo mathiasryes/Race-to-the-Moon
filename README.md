@@ -10,7 +10,9 @@ A 2D vertical platformer made in Godot 4.7 by a team of three.
 4. Optional: open `docs/` in Obsidian as a vault.
 
 ## Controls
-Move: A/D or arrow keys · Jump: Space / W / ↑ (hold to jump higher) · Gamepad supported.
+Move: A/D or arrow keys · Jump: Space / W / ↑ (hold to jump higher) · Restart: R / Enter · Gamepad supported.
+
+Beat the rocket to the moon: if it leaves the top of the screen, you lose.
 
 ## Editor setup (VS Code)
 Install the recommended extensions when VS Code asks (godot-tools, EditorConfig, Claude Code).

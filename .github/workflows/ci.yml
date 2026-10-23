@@ -38,6 +38,9 @@ jobs:
       - name: Run tests
         run: godot --headless --path . -s res://tests/framework/run_tests.gd
 
+      - name: Race scenarios
+        run: godot --headless --path . -s res://tests/framework/race_scenarios.gd
+
       - name: Smoke-run main scene
         run: godot --headless --path . --quit-after 120
 

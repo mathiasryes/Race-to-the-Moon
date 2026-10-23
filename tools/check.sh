@@ -7,3 +7,4 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 "$GODOT" --headless --path "$ROOT" --import
 "$GODOT" --headless --path "$ROOT" -s res://tests/framework/run_tests.gd
+"$GODOT" --headless --path "$ROOT" -s res://tests/framework/race_scenarios.gd
