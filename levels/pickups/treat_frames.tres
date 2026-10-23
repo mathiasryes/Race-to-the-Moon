@@ -1,0 +1,39 @@
+[gd_resource type="SpriteFrames" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/art/pickups/treat.png" id="1_treat"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_plain"]
+atlas = ExtResource("1_treat")
+region = Rect2(0, 0, 14, 10)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_glint0"]
+atlas = ExtResource("1_treat")
+region = Rect2(14, 0, 14, 10)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_glint1"]
+atlas = ExtResource("1_treat")
+region = Rect2(28, 0, 14, 10)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sparkle"]
+atlas = ExtResource("1_treat")
+region = Rect2(42, 0, 14, 10)
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 10.0,
+"texture": SubResource("AtlasTexture_plain")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_glint0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_glint1")
+}, {
+"duration": 2.0,
+"texture": SubResource("AtlasTexture_sparkle")
+}],
+"loop": true,
+"name": &"shine",
+"speed": 10.0
+}]

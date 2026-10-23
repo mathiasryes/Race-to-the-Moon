@@ -35,6 +35,13 @@ theme_override_font_sizes/font_size = 16
 text = "The rocket is getting away!"
 horizontal_alignment = 1
 
+[node name="DashIndicator" type="HBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 20.0
+offset_bottom = 20.0
+theme_override_constants/separation = 3
+
 [node name="EndScreen" type="ColorRect" parent="."]
 anchors_preset = 15
 anchor_right = 1.0
