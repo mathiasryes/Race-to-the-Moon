@@ -106,6 +106,75 @@ func test_reach_grows_with_double_jump_and_dash() -> void:
 	assert_true(Generator.can_reach(low, high, jump, Generator.Move.DOUBLE_JUMP), "100 px is fine with a double jump")
 
 
+## The dash goes 8 ways: straight up it adds its distance plus the coast afterwards, using the player's values.
+func test_upward_dash_rise_formula() -> void:
+	var player: Player = PlayerScript.new()
+	var jump: Generator.Jump = Generator.Jump.from_player(player)
+	var coast: float = player.run_speed * player.run_speed / (2.0 * player.get_jump_gravity())
+	var expected: float = player.get_dash_distance() + coast
+	assert_almost_eq(Generator.dash_rise(jump), expected, 0.01)
+	assert_almost_eq(Generator.post_dash_rise(1.0, jump), coast, 0.01)
+	assert_almost_eq(Generator.highest_ever(jump), player.jump_height + player.double_jump_height + expected, 0.01)
+	assert_true(Generator.max_rise(Generator.Move.DASH, jump) > Generator.max_rise(Generator.Move.DOUBLE_JUMP, jump) \
+		+ player.get_dash_distance() * 0.8, "an upward dash should add most of the dash distance to the reach")
+	assert_true(Generator.max_dash_rise(Generator.DASH_UP, jump) > Generator.max_dash_rise(Generator.DASH_DIAGONAL, jump))
+	assert_true(Generator.max_dash_rise(Generator.DASH_DIAGONAL, jump) > Generator.max_dash_rise(Generator.DASH_SIDE, jump))
+	player.free()
+
+
+## Simulates jump + double jump + a straight-up dash at the top, with the player's own gravity: the peak is
+## where the generator thinks it is (the dash is fixed speed with no gravity, then it leaves run_speed upwards).
+func test_upward_dash_peak_matches_settings() -> void:
+	var player: Player = PlayerScript.new()
+	var jump: Generator.Jump = Generator.Jump.from_player(player)
+	var dt: float = 1.0 / 240.0
+	var y: float = 0.0
+	var peak: float = 0.0
+	var stage: int = 0  # 0 = jump, 1 = double jump, 2 = after the dash
+	player.velocity = Vector2(0.0, player.get_jump_velocity())
+	for i: int in 2000:
+		player.velocity.y = minf(player.velocity.y + player.current_gravity() * dt, player.max_fall_speed)
+		if stage == 0 and player.velocity.y >= 0.0:
+			player.velocity.y = player.get_double_jump_velocity()
+			stage = 1
+		elif stage == 1 and player.velocity.y >= 0.0:
+			y -= player.get_dash_distance()  # the dash: dash_speed for dash_time, straight up, no gravity
+			player.velocity.y = -player.run_speed
+			stage = 2
+		y += player.velocity.y * dt
+		peak = maxf(peak, -y)
+		if stage == 2 and player.velocity.y > 0.0:
+			break
+	var expected: float = Generator.highest_ever(jump)
+	assert_true(absf(peak - expected) <= 6.0, "jump + double jump + up dash peaks at %.1f px, expected %.0f" % [
+		peak, expected])
+	player.free()
+
+
+## Which dash direction gets you where: high up needs an upward dash, far out a sideways one.
+func test_dash_reach_depends_on_direction() -> void:
+	var jump: Generator.Jump = _jump()
+	var base: Dictionary = {"x": 0.0, "y": 0.0, "width": 3}
+	var rise: float = jump.height + jump.double_jump_height + 16.0
+	var overhead: Dictionary = {"x": 40.0, "y": -rise, "width": 2}
+	assert_false(Generator.can_reach(base, overhead, jump, Generator.Move.DOUBLE_JUMP), "too high without the dash")
+	assert_false(Generator.can_dash_to(base, overhead, jump, Generator.DASH_SIDE), "a sideways dash doesn't climb")
+	assert_true(Generator.can_dash_to(base, overhead, jump, Generator.DASH_UP), "an upward dash gets %.0f px up" % rise)
+	assert_true(Generator.can_reach(base, overhead, jump, Generator.Move.DASH))
+	var gap: float = Generator.max_double_jump_gap(0.0, jump) + 40.0
+	var far: Dictionary = {"x": gap + 40.0, "y": 0.0, "width": 2}
+	assert_false(Generator.can_reach(base, far, jump, Generator.Move.DOUBLE_JUMP), "too far without the dash")
+	assert_true(Generator.can_dash_to(base, far, jump, Generator.DASH_SIDE), "a sideways dash crosses %.0f px" % gap)
+	assert_false(Generator.can_dash_to(base, far, jump, Generator.DASH_UP), "a straight-up dash doesn't go sideways")
+	for r: float in [-60.0, 0.0, 60.0, 120.0, 180.0, 220.0]:
+		# The generous "could anyone ever get there" rule must allow at least what the generator plans with.
+		assert_true(Generator.ever_gap(r, jump) >= Generator.best_dash_gap(r, jump),
+			"rise %.0f: generous gap %.0f < planned dash gap %.0f" % [r, Generator.ever_gap(r, jump),
+			Generator.best_dash_gap(r, jump)])
+		assert_true(Generator.ever_gap(r, jump) >= Generator.max_ever_gap(r, jump) - 0.01)
+	assert_true(Generator.max_rise(Generator.Move.DASH, jump) < Generator.highest_ever(jump))
+
+
 func test_every_step_of_the_route_is_reachable_without_the_dash() -> void:
 	var jump: Generator.Jump = _jump()
 	for level_seed: int in range(1, 61):
@@ -120,22 +189,43 @@ func test_every_step_of_the_route_is_reachable_without_the_dash() -> void:
 			return
 
 
-func test_most_route_steps_are_single_jumps() -> void:
+## Playtest: "very easy with the double jump". About half the route's steps now need it.
+func test_about_half_the_route_steps_need_the_double_jump() -> void:
 	var jump: Generator.Jump = _jump()
 	var steps: int = 0
 	var doubles: int = 0
 	for level_seed: int in range(1, SEEDS + 1):
 		var previous: Dictionary = FLOOR
+		var level_steps: int = 0
 		var level_doubles: int = 0
 		for platform: Dictionary in _layout(level_seed).main:
-			steps += 1
+			level_steps += 1
 			if not Generator.can_reach(previous, platform, jump, Generator.Move.SINGLE_JUMP):
 				level_doubles += 1
 			previous = platform
-		assert_true(level_doubles >= 4, "seed %d: only %d double-jump steps" % [level_seed, level_doubles])
+		var level_share: float = float(level_doubles) / level_steps
+		assert_true(level_share >= 0.38 and level_share <= 0.62, "seed %d: %d of %d route steps need the double jump" % [
+			level_seed, level_doubles, level_steps])
+		steps += level_steps
 		doubles += level_doubles
 	var share: float = float(doubles) / steps
-	assert_true(share >= 0.15 and share <= 0.35, "%.0f%% of route steps need the double jump" % (share * 100.0))
+	assert_true(share >= 0.45 and share <= 0.55, "%.0f%% of route steps need the double jump" % (share * 100.0))
+
+
+## Single-jump steps of the route are big too: they climb at least SINGLE_STEP_MIN (except near the moon).
+func test_single_jump_steps_are_not_tiny() -> void:
+	var jump: Generator.Jump = _jump()
+	for level_seed: int in range(1, SEEDS + 1):
+		var route: Array[Dictionary] = _layout(level_seed).main
+		var previous: Dictionary = FLOOR
+		for k: int in route.size() - 2:  # the last steps squeeze in under the moon
+			var rise: float = float(previous["y"]) - float(route[k]["y"])
+			assert_true(rise >= Generator.SINGLE_STEP_MIN - 1.0, "seed %d: route step %d only rises %.0f px" % [
+				level_seed, k, rise])
+			previous = route[k]
+		if not failures.is_empty():
+			return
+	assert_true(Generator.SINGLE_STEP_MIN > Generator.max_rise(Generator.Move.SINGLE_JUMP, jump) * 0.5)
 
 
 func test_platforms_stay_inside_the_walls() -> void:
@@ -246,22 +336,27 @@ func test_route_heads_for_the_other_side_or_the_middle() -> void:
 		assert_true(after_middle >= Generator.SIDE_TARGET_RANGE.x, "no two middle stops in a row (went to %.0f)" % after_middle)
 
 
-## About twice as full as the first version (~90 platforms): every screen has plenty to look at.
-func test_level_is_full() -> void:
+## Playtest: "less platforms overall". About 90-110 per 3200 px level (10-12 per screen), none of it empty.
+func test_platform_count() -> void:
+	var total: int = 0
 	for level_seed: int in range(1, SEEDS + 1):
 		var platforms: Array[Dictionary] = _platforms(level_seed)
-		assert_true(platforms.size() >= 150, "seed %d: only %d platforms" % [level_seed, platforms.size()])
+		total += platforms.size()
+		assert_true(platforms.size() >= 85 and platforms.size() <= 120, "seed %d: %d platforms" % [
+			level_seed, platforms.size()])
 		var screen_bottom: float = 0.0
 		while screen_bottom < HEIGHT - 360.0:
 			var count: int = 0
 			for platform: Dictionary in platforms:
 				if -platform["y"] > screen_bottom and -platform["y"] <= screen_bottom + 360.0:
 					count += 1
-			assert_true(count >= 10, "seed %d: only %d platforms between %.0f and %.0f px" % [
+			assert_true(count >= 6 and count <= 24, "seed %d: %d platforms between %.0f and %.0f px" % [
 				level_seed, count, screen_bottom, screen_bottom + 360.0])
 			screen_bottom += 180.0
 		if not failures.is_empty():
 			return
+	var average: float = float(total) / SEEDS
+	assert_true(average >= 90.0 and average <= 110.0, "%.1f platforms per level on average" % average)
 
 
 ## The heart of the level design: the moon is reachable without the dash, and around the route there are
@@ -269,6 +364,8 @@ func test_level_is_full() -> void:
 func test_reachability_graph() -> void:
 	var jump: Generator.Jump = _jump()
 	var dash_total: int = 0
+	var up_total: int = 0
+	var side_total: int = 0
 	for level_seed: int in range(1, SEEDS + 1):
 		var graph: Dictionary = _graph(level_seed)
 		var nodes: Array[Dictionary] = graph["nodes"]
@@ -287,17 +384,33 @@ func test_reachability_graph() -> void:
 			elif higher >= 2:
 				choices += 1
 		assert_true(unreachable >= 5, "seed %d: only %d unreachable platforms" % [level_seed, unreachable])
-		assert_true(dash.size() >= 1, "seed %d: no dash-only platforms" % level_seed)
+		assert_true(dash.size() >= 2, "seed %d: only %d dash-only platforms" % [level_seed, dash.size()])
 		dash_total += dash.size()
-		assert_true(dead_ends >= 8, "seed %d: only %d dead ends" % [level_seed, dead_ends])
-		assert_true(choices >= walk.size() * 0.5, "seed %d: only %d of %d reachable platforms offer a choice" % [
+		# A dash-only platform "needs a sideways dash" if a sideways dash from somewhere reachable gets there,
+		# otherwise it needs an upward or diagonal one.
+		for j: int in dash:
+			var sideways: bool = false
+			for i: int in walk:
+				if Generator.can_dash_to(nodes[i], nodes[j], jump, Generator.DASH_SIDE):
+					sideways = true
+					break
+			if sideways:
+				side_total += 1
+			else:
+				up_total += 1
+		assert_true(dead_ends >= 5, "seed %d: only %d dead ends" % [level_seed, dead_ends])
+		assert_true(choices >= walk.size() * 0.3, "seed %d: only %d of %d reachable platforms offer a choice" % [
 			level_seed, choices, walk.size()])
 		if not failures.is_empty():
 			return
-	assert_true(dash_total >= SEEDS * 2, "only %d dash-only platforms in %d levels" % [dash_total, SEEDS])
+	assert_true(dash_total >= SEEDS * 3, "only %d dash-only platforms in %d levels" % [dash_total, SEEDS])
+	assert_true(up_total >= SEEDS * 0.5, "only %d dash-only platforms need an upward dash in %d levels" % [up_total, SEEDS])
+	assert_true(side_total >= SEEDS * 0.5, "only %d dash-only platforms need a sideways dash in %d levels" % [
+		side_total, SEEDS])
 
 
-## Platforms the generator marks as unreachable are out of reach even by the generous rule.
+## Platforms the generator marks as unreachable are out of reach even by the generous rule, and even with an
+## upward, diagonal or sideways dash given the full unreachable margin on top.
 func test_unreachable_platforms_stay_out_of_reach() -> void:
 	var jump: Generator.Jump = _jump()
 	for level_seed: int in range(1, SEEDS + 1):
@@ -309,9 +422,19 @@ func test_unreachable_platforms_stay_out_of_reach() -> void:
 			assert_false(graph["walk"].has(j) or graph["dash"].has(j),
 				"seed %d: unreachable platform %d can be reached" % [level_seed, j])
 			for i: int in nodes.size():
-				if nodes[i]["kind"] != "unreachable":
-					assert_false(Generator.could_ever_reach(nodes[i], nodes[j], jump),
-						"seed %d: platform %d could reach unreachable platform %d" % [level_seed, i, j])
+				if nodes[i]["kind"] == "unreachable":
+					continue
+				assert_false(Generator.could_ever_reach(nodes[i], nodes[j], jump),
+					"seed %d: platform %d could reach unreachable platform %d" % [level_seed, i, j])
+				for direction: Vector2 in Generator.DASH_DIRECTIONS:
+					assert_false(Generator.can_dash_to(nodes[i], nodes[j], jump, direction, Generator.UNREACHABLE_MARGIN),
+						"seed %d: a %s dash from platform %d reaches unreachable platform %d" % [
+						level_seed, direction, i, j])
+				# Straight up: nothing gets higher than jump + double jump + an upward dash.
+				var rise: float = float(nodes[i]["y"]) - float(nodes[j]["y"])
+				if Generator.edge_gap(nodes[i], nodes[j]) <= 0.0 and rise > 0.0:
+					assert_true(rise > Generator.highest_ever(jump),
+						"seed %d: unreachable platform %d is only %.0f px above platform %d" % [level_seed, j, rise, i])
 		if not failures.is_empty():
 			return
 
@@ -336,7 +459,7 @@ func test_forks_are_real_alternative_paths() -> void:
 				"seed %d: the fork from route step %d to %d is not climbable" % [level_seed, fork.x, fork.y])
 		if not failures.is_empty():
 			return
-	assert_true(total >= SEEDS * 2, "only %d forks in %d levels" % [total, SEEDS])
+	assert_true(total >= SEEDS * 1.3, "only %d forks in %d levels" % [total, SEEDS])
 
 
 func test_treats_are_spread_out_and_reachable() -> void:

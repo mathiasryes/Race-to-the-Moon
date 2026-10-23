@@ -3,8 +3,9 @@ extends Node2D
 ## Builds the climb at startup: platforms from the ground up to the moon, styled by height region,
 ## plus dog treats and background props. Moves the goal and moon to the top.
 ## The level is meant to feel like a place you find your way up, not a corridor:
-## a guaranteed route (jump + double jump, never the dash), forks that split and rejoin, dead ends,
-## extra stepping stones, platforms you can't reach, and dash-only ledges holding treats.
+## a guaranteed route (jump + double jump, never the dash; about half its steps need the double jump),
+## forks that split and rejoin, dead ends, a few extra stepping stones, platforms you can't reach (even with
+## an upward dash), and dash-only ledges holding treats (some need a sideways dash, some an upward one).
 ## All distances come from the player's jump settings, so retuning the jump keeps every level beatable.
 
 enum Region { LAUNCH, SKY, UPPER_ATMOSPHERE, SPACE, MOON }
@@ -46,10 +47,21 @@ const FLOOR_TILES: int = 40
 const RISE_FRACTION: float = 0.8
 ## Only this fraction of the possible horizontal jump reach is used, leaving room for imperfect jumps.
 const REACH_SAFETY: float = 0.75
-## Fraction of the dash distance counted on top of the jump reach (the dash itself is exact).
+## Fraction of the dash distance (and the small rise after an upward dash) counted on top of the jump reach.
 const DASH_SAFETY: float = 0.9
 ## Moves to a lower platform are only counted down to this drop (anything lower is "falling back").
 const DROP_LIMIT: float = 64.0
+## Dash directions the generator plans with (Godot axes: -y is up). The dash is 8-directional and
+## left/right mirror each other, so sideways, diagonally up and straight up cover every useful case.
+const DASH_SIDE: Vector2 = Vector2(1.0, 0.0)
+const DASH_DIAGONAL: Vector2 = Vector2(0.70710678, -0.70710678)
+const DASH_UP: Vector2 = Vector2(0.0, -1.0)
+const DASH_DIRECTIONS: Array[Vector2] = [DASH_SIDE, DASH_DIAGONAL, DASH_UP]
+## Upward share of the dash checked by the generous "could anyone ever get there" rule (0 = sideways, 1 = up).
+const EVER_DASH_SAMPLES: int = 10
+## The generous rule lets the fall be broken up this many times (the double jump and the dash both
+## stop a fall and start a new one, and a fall in pieces lasts longer than one long fall).
+const EVER_FALL_PIECES: int = 3
 
 # Spacing
 ## Platforms that overlap sideways are at least this far apart vertically (the dog is ~16 px tall).
@@ -62,11 +74,13 @@ const TOP_CLEARANCE: float = 48.0
 
 # Main route
 ## Chance that a step of the route is too high for a single jump (needs the double jump).
-const DOUBLE_STEP_CHANCE: float = 0.25
+const DOUBLE_STEP_CHANCE: float = 0.5
 ## Double-jump steps rise at least this much more than a full single jump.
 const DOUBLE_STEP_EXTRA: float = 8.0
+## Single-jump steps of the route rise at least this much (up to RISE_FRACTION of the jump height).
+const SINGLE_STEP_MIN: float = 44.0
 ## Each step moves sideways by at least this fraction of the reachable distance (unless the target is closer).
-const MIN_SIDE_STEP: float = 0.6
+const MIN_SIDE_STEP: float = 0.85
 ## The route heads for a target on the other side this far out from the centre...
 ## (Must stay reachable for the widest platform, whose centre can't go past HALF_WIDTH - 48.)
 const SIDE_TARGET_RANGE: Vector2 = Vector2(170.0, 250.0)
@@ -75,7 +89,7 @@ const MIDDLE_TARGET_CHANCE: float = 0.15
 
 # Exploration
 ## Climb between forks (alternative paths that split off the route and rejoin it).
-const FORK_SPACING: Vector2 = Vector2(350.0, 700.0)
+const FORK_SPACING: Vector2 = Vector2(600.0, 1100.0)
 ## A fork bypasses this many route steps.
 const FORK_STEPS: Vector2i = Vector2i(3, 5)
 ## Average rise per hop on a fork.
@@ -83,17 +97,25 @@ const FORK_HOP: float = 56.0
 ## A fork must get at least this far (sideways) from the route to count as a different path.
 const FORK_MIN_SEPARATION: float = 100.0
 ## Climb between attempts to add a dead end (a short side chain that leads nowhere).
-const DEAD_END_SPACING: Vector2 = Vector2(70.0, 130.0)
+const DEAD_END_SPACING: Vector2 = Vector2(140.0, 240.0)
 ## Platforms per dead-end chain.
-const DEAD_END_LENGTH: Vector2i = Vector2i(1, 3)
+const DEAD_END_LENGTH: Vector2i = Vector2i(1, 2)
 ## Unreachable platforms per 1000 px of climb (placed only where nothing can reach them).
-const UNREACHABLE_PER_1000: float = 3.5
+const UNREACHABLE_PER_1000: float = 2.0
 ## More unreachable platforms per 1000 px added at the end, which fills the emptier spots.
-const LATE_UNREACHABLE_PER_1000: float = 2.5
-## Extra distance (and drop) beyond the dash reach that keeps unreachable platforms out of reach.
+const LATE_UNREACHABLE_PER_1000: float = 1.0
+## Grid of spots tried for unreachable platforms: columns across the level, one row every this many pixels.
+const UNREACHABLE_COLUMNS: int = 24
+const UNREACHABLE_ROW_STEP: float = 16.0
+## Extra distance (and drop) beyond the most generous dash reach that keeps unreachable platforms out of reach.
 const UNREACHABLE_MARGIN: float = 24.0
 ## Dash-only ledges sit at least this much beyond the no-dash reach from every platform.
 const DASH_ONLY_MARGIN: float = 12.0
+## Chance a new dash-only ledge needs an upward or diagonal dash (otherwise a sideways one). The generator
+## also evens them out so a level with two or more ledges has both kinds when there's room.
+const UP_DASH_LEDGE_CHANCE: float = 0.6
+## Random placements tried per dash-only ledge (and kind).
+const DASH_LEDGE_TRIES: int = 150
 
 # Treats
 ## Climb between treats.
@@ -106,6 +128,9 @@ const MAIN_TREAT_CHANCE: float = 0.15
 const DASH_TREAT_CHANCE: float = 0.55
 ## Every level gets at least this many dash-only ledges (if there's room).
 const MIN_DASH_LEDGES: int = 2
+## Treats left over after the dead ends are built go on upward-dash ledges above dead ends until a level has
+## this many upward-dash ledges (if there's room).
+const MIN_UP_DASH_LEDGES: int = 2
 
 ## Rows of this height bucket platforms for fast neighbour lookups.
 const ROW_HEIGHT: float = 64.0
@@ -121,8 +146,8 @@ const ROW_HEIGHT: float = 64.0
 ## 0 = a new level every run. Any other number always builds the same level.
 @export var level_seed: int = 0
 @export var level_height: float = 3200.0
-## Extra stepping stones per 100 px of climb (more = more ways up).
-@export_range(0.0, 3.0) var extra_density: float = 2.5
+## Extra stepping stones per 100 px of climb (more = more ways up, and an easier, fuller level).
+@export_range(0.0, 3.0) var extra_density: float = 0.8
 ## Average vertical distance between background props.
 @export var decor_spacing: float = 140.0
 
@@ -140,6 +165,8 @@ class Jump:
 	var max_fall_speed: float = INF
 	var double_jump_height: float = 0.0
 	var dash_distance: float = 0.0
+	## max_ever_gap by whole-pixel rise, filled in on first use (see LevelGenerator.ever_gap).
+	var ever_gaps: PackedFloat32Array = PackedFloat32Array()
 
 	static func from_player(p: Player) -> Jump:
 		var jump := Jump.new()
@@ -194,6 +221,8 @@ class Layout:
 	var dead_ends: Array[Dictionary] = []
 	var unreachable: Array[Dictionary] = []
 	var dash_ledges: Array[Dictionary] = []
+	## The dash-only ledges planned for an upward or diagonal dash (the rest are planned for a sideways one).
+	var up_dash_ledges: Array[Dictionary] = []
 	## Row index -> platforms in that row (includes the floor).
 	var rows: Dictionary = {}
 
@@ -226,7 +255,7 @@ func _ready() -> void:
 
 
 ## Builds the whole level. Same rng seed = same level.
-static func generate_layout(rng: RandomNumberGenerator, height: float, jump: Jump, density: float = 2.5) -> Layout:
+static func generate_layout(rng: RandomNumberGenerator, height: float, jump: Jump, density: float = 0.8) -> Layout:
 	var layout := Layout.new()
 	layout.height = height
 	layout.jump = jump
@@ -238,11 +267,13 @@ static func generate_layout(rng: RandomNumberGenerator, height: float, jump: Jum
 
 	# Order matters: things that must stay out of reach (unreachable platforms, dash-only ledges, dead ends)
 	# claim their space first, and everything added later checks it doesn't spoil them.
+	# Forks come right after the route: with the 8-way dash, unreachable platforms need so much room that
+	# they would otherwise crowd out the forks.
 	_build_main_route(layout, rng)
+	_build_forks(layout, rng)
 	_build_unreachable(layout, rng, roundi(height / 1000.0 * UNREACHABLE_PER_1000))
 	var treat_slots: Array[Vector2] = _plan_treats(layout, rng)
 	treat_slots = _place_dash_treats(layout, rng, treat_slots)
-	_build_forks(layout, rng)
 	_build_dead_ends(layout, rng)
 	_place_other_treats(layout, rng, treat_slots)
 	_build_extras(layout, rng, density)
@@ -256,9 +287,33 @@ static func generate_layout(rng: RandomNumberGenerator, height: float, jump: Jum
 
 ## Highest rise (pixels) the generator uses for a move.
 static func max_rise(move: Move, jump: Jump) -> float:
-	if move == Move.SINGLE_JUMP:
-		return jump.height * RISE_FRACTION
-	return (jump.height + jump.double_jump_height) * RISE_FRACTION
+	match move:
+		Move.SINGLE_JUMP:
+			return jump.height * RISE_FRACTION
+		Move.DOUBLE_JUMP:
+			return (jump.height + jump.double_jump_height) * RISE_FRACTION
+	return max_dash_rise(DASH_UP, jump)
+
+
+## How far the dog keeps rising after a dash ends: the dash leaves it moving at run_speed along the dash,
+## so `up` (the upward share of the dash direction, 0-1) of that speed coasts up against jump gravity.
+static func post_dash_rise(up: float, jump: Jump) -> float:
+	var speed: float = up * jump.run_speed
+	return speed * speed / (2.0 * jump.rise_gravity())
+
+
+## Height a straight-up dash adds on top of a jump: the dash distance plus the coast after it
+## (dash_distance + run_speedÂ² / (2 * jump gravity)).
+static func dash_rise(jump: Jump) -> float:
+	return jump.dash_distance + post_dash_rise(1.0, jump)
+
+
+## Highest rise the generator uses for jump + double jump + one dash in `direction` (unit vector, -y up).
+static func max_dash_rise(direction: Vector2, jump: Jump) -> float:
+	if jump.dash_distance <= 0.0:
+		return max_rise(Move.DOUBLE_JUMP, jump)
+	var up: float = maxf(0.0, -direction.y)
+	return max_rise(Move.DOUBLE_JUMP, jump) + (jump.dash_distance * up + post_dash_rise(up, jump)) * DASH_SAFETY
 
 
 ## Seconds in the air for a jump from standstill that comes down `rise` pixels higher (negative = lower).
@@ -285,12 +340,30 @@ static func max_double_jump_gap(rise: float, jump: Jump) -> float:
 	return _safe_gap(air_time(rise, jump, true), jump)
 
 
-## Same as max_double_jump_gap, plus one dash.
-static func max_dash_gap(rise: float, jump: Jump) -> float:
-	var time: float = air_time(rise, jump, true)
-	if time < 0.0:
-		return 0.0
-	return _safe_gap(time, jump) + jump.dash_distance * DASH_SAFETY
+## Same as max_double_jump_gap, plus one dash in `direction` (unit vector, -y up; only its size sideways
+## matters, left and right are the same) at the top of the double jump. -1 if the rise is too high for it.
+## The dash covers dash_distance along the direction with no gravity, then the dog coasts up a little
+## (post_dash_rise), falls, and has to speed up sideways again from what the dash left it with.
+static func max_dash_gap(rise: float, jump: Jump, direction: Vector2 = DASH_SIDE) -> float:
+	if rise > max_dash_rise(direction, jump):
+		return -1.0
+	var up: float = maxf(0.0, -direction.y)
+	var side: float = absf(direction.x)
+	var gravity: float = jump.rise_gravity()
+	var peak: float = jump.height + jump.double_jump_height + jump.dash_distance * up + post_dash_rise(up, jump)
+	var time: float = jump.time_to_peak + jump.double_jump_rise_time() + up * jump.run_speed / gravity \
+		+ jump.fall_time(peak - rise)
+	# After the dash the dog moves sideways at side * run_speed and has to speed up to run_speed again.
+	var restart_loss: float = pow(jump.run_speed * (1.0 - side), 2.0) / (2.0 * jump.air_acceleration)
+	return maxf(0.0, _safe_gap(time, jump) - restart_loss * REACH_SAFETY + jump.dash_distance * side * DASH_SAFETY)
+
+
+## Largest gap at `rise` with jump + double jump + one dash in the best of DASH_DIRECTIONS, or -1 if none.
+static func best_dash_gap(rise: float, jump: Jump) -> float:
+	var best: float = -1.0
+	for direction: Vector2 in DASH_DIRECTIONS:
+		best = maxf(best, max_dash_gap(rise, jump, direction))
+	return best
 
 
 ## Largest gap for `move` at `rise`, or -1 if the rise is too high for that move.
@@ -302,7 +375,7 @@ static func max_gap(rise: float, jump: Jump, move: Move) -> float:
 			return max_edge_gap(rise, jump)
 		Move.DOUBLE_JUMP:
 			return max_double_jump_gap(rise, jump)
-	return max_dash_gap(rise, jump)
+	return best_dash_gap(rise, jump)
 
 
 static func _safe_gap(time: float, jump: Jump) -> float:
@@ -327,16 +400,59 @@ static func can_reach(from: Dictionary, to: Dictionary, jump: Jump, move: Move, 
 	return edge_gap(from, to) <= max_gap(minf(rise, highest), jump, move) + margin
 
 
+## Like can_reach with Move.DASH, but only with a dash in `direction`.
+static func can_dash_to(from: Dictionary, to: Dictionary, jump: Jump, direction: Vector2, margin: float = 0.0) -> bool:
+	var rise: float = float(from["y"]) - float(to["y"])
+	var highest: float = max_dash_rise(direction, jump)
+	if rise > highest + margin or rise < -DROP_LIMIT - margin:
+		return false
+	return edge_gap(from, to) <= max_dash_gap(minf(rise, highest), jump, direction) + margin
+
+
+## Highest anyone could ever get above a platform: full jump + full double jump + a straight-up dash.
+static func highest_ever(jump: Jump) -> float:
+	return jump.height + jump.double_jump_height + dash_rise(jump)
+
+
+## Upper bound on the gap a perfect player could cross at `rise` with jump + double jump + one dash in any
+## direction, at any moment. No safety factors, full speed from the start, and the fall broken into
+## EVER_FALL_PIECES equal pieces (the double jump and the dash each stop a fall, which buys air time).
+## -1 if even that can't get so high.
+static func max_ever_gap(rise: float, jump: Jump) -> float:
+	var best: float = -1.0
+	var gravity: float = jump.rise_gravity()
+	for sample: int in EVER_DASH_SAMPLES + 1:
+		var up: float = float(sample) / EVER_DASH_SAMPLES
+		var peak: float = jump.height + jump.double_jump_height + jump.dash_distance * up + post_dash_rise(up, jump)
+		if rise > peak + 0.01:
+			continue
+		var time: float = jump.time_to_peak + jump.double_jump_rise_time() + up * jump.run_speed / gravity \
+			+ EVER_FALL_PIECES * jump.fall_time((peak - rise) / EVER_FALL_PIECES)
+		best = maxf(best, jump.run_speed * time + jump.dash_distance * sqrt(1.0 - up * up))
+	return best
+
+
 ## Generous check used for unreachable platforms: true unless `to` is clearly out of reach from `from`,
-## even with the dash and a perfect jump. Height uses the real (not safety-reduced) jump + double jump.
+## even for a perfect player with jump + double jump + a dash in any of the 8 directions (up included).
 static func could_ever_reach(from: Dictionary, to: Dictionary, jump: Jump) -> bool:
 	var rise: float = float(from["y"]) - float(to["y"])
-	if rise > jump.height + jump.double_jump_height + UNREACHABLE_MARGIN / 3.0:
+	if rise > highest_ever(jump) + UNREACHABLE_MARGIN / 3.0:
 		return false
 	if rise < -DROP_LIMIT - UNREACHABLE_MARGIN:
 		return false
-	var gap_rise: float = minf(rise, max_rise(Move.DASH, jump))
-	return edge_gap(from, to) <= max_dash_gap(gap_rise, jump) + UNREACHABLE_MARGIN
+	return edge_gap(from, to) <= ever_gap(rise, jump) + UNREACHABLE_MARGIN
+
+
+## max_ever_gap, looked up by rise rounded down to a whole pixel (a lower rise never allows a smaller gap,
+## so rounding down keeps the rule generous). Used for every unreachable check, so it has to be fast.
+static func ever_gap(rise: float, jump: Jump) -> float:
+	var lowest: int = -ceili(DROP_LIMIT + UNREACHABLE_MARGIN)
+	var highest: int = ceili(highest_ever(jump))
+	if jump.ever_gaps.is_empty():
+		for whole: int in range(lowest, highest + 1):
+			jump.ever_gaps.append(max_ever_gap(minf(float(whole), highest_ever(jump)), jump))
+	var index: int = clampi(floori(rise), lowest, highest) - lowest
+	return jump.ever_gaps[index]
 
 
 # --- Main route -------------------------------------------------------------------------------------
@@ -352,6 +468,8 @@ static func _build_main_route(layout: Layout, rng: RandomNumberGenerator) -> voi
 	# The route sweeps from side to side; `last_side` is the side it most recently headed for.
 	var last_side: float = -1.0 if rng.randf() < 0.5 else 1.0
 	var target: float = next_target(rng, last_side, false)
+	var steps: int = 0
+	var doubles: int = 0
 	while height + y > single_rise:
 		if absf(target - float(previous["x"])) < 24.0:
 			var was_middle: bool = absf(target) <= 60.0
@@ -359,13 +477,19 @@ static func _build_main_route(layout: Layout, rng: RandomNumberGenerator) -> voi
 				last_side = signf(target)
 			target = next_target(rng, last_side, not was_middle)
 		var remaining: float = height + y
+		# Lean towards DOUBLE_STEP_CHANCE: a route that has had few double-jump steps so far gets more.
+		var double_chance: float = clampf(DOUBLE_STEP_CHANCE + (DOUBLE_STEP_CHANCE * steps - doubles) * 0.2, 0.1, 0.9)
 		var move: Move = Move.SINGLE_JUMP
-		var rise: float
-		if rng.randf() < DOUBLE_STEP_CHANCE and remaining - MIN_GAP_Y >= double_min and double_rise > double_min:
+		if rng.randf() < double_chance and remaining - MIN_GAP_Y >= double_min and double_rise > double_min:
 			move = Move.DOUBLE_JUMP
+			doubles += 1
+		steps += 1
+		var rise: float
+		if move == Move.DOUBLE_JUMP:
 			rise = floorf(rng.randf_range(double_min, minf(double_rise, remaining - MIN_GAP_Y)))
 		else:
-			rise = floorf(rng.randf_range(MIN_GAP_Y, minf(single_rise, remaining - MIN_GAP_Y)))
+			var highest: float = minf(single_rise, remaining - MIN_GAP_Y)
+			rise = floorf(rng.randf_range(minf(SINGLE_STEP_MIN, highest), highest))
 		y -= rise
 		var width: int = _random_width(rng, y, height)
 		var platform: Dictionary = _new_platform(rng, _pick_x(rng, previous, width, rise, jump, target, move), y,
@@ -553,34 +677,40 @@ static func _blocks_dead_end(layout: Layout, platform: Dictionary) -> bool:
 
 # --- Unreachable platforms: scenery you can see but never get to --------------------------------------
 
+## Adds unreachable platforms until there are `wanted`. With the upward dash the reach is big, so free spots
+## are rare (mostly on the far side where the route turns); every spot on a coarse grid is tried, in random
+## order, instead of hoping random picks find them.
 static func _build_unreachable(layout: Layout, rng: RandomNumberGenerator, wanted: int) -> void:
-	for attempt: int in wanted * 12:
+	if layout.unreachable.size() >= wanted:
+		return
+	var spots: Array[Vector2] = []
+	var h: float = ceilf(highest_ever(layout.jump) + UNREACHABLE_MARGIN + 16.0)
+	while h < layout.height - 160.0:
+		for column: int in UNREACHABLE_COLUMNS:
+			spots.append(Vector2(lerpf(-HALF_WIDTH, HALF_WIDTH, (column + 0.5) / UNREACHABLE_COLUMNS), -h))
+		h += UNREACHABLE_ROW_STEP
+	for i: int in range(spots.size() - 1, 0, -1):  # shuffle with the level's rng (Array.shuffle isn't seeded)
+		var j: int = rng.randi_range(0, i)
+		var swap: Vector2 = spots[i]
+		spots[i] = spots[j]
+		spots[j] = swap
+	for spot: Vector2 in spots:
 		if layout.unreachable.size() >= wanted:
 			return
-		var y: float = -roundf(rng.randf_range(240.0, layout.height - 160.0))
-		var width: int = _random_width(rng, y, layout.height)
-		var limit: float = HALF_WIDTH - width * TILE / 2.0
-		var candidate: Dictionary = _new_platform(rng, roundf(rng.randf_range(-limit, limit)), y, width,
-			layout.height, "unreachable")
+		var width: int = _random_width(rng, spot.y, layout.height)
+		var limit: float = floorf(HALF_WIDTH - width * TILE / 2.0)
+		var x: float = clampf(roundf(spot.x + rng.randf_range(-12.0, 12.0)), -limit, limit)
+		var candidate: Dictionary = _new_platform(rng, x, spot.y, width, layout.height, "unreachable")
 		if not _fits(layout, candidate) or _could_be_reached(layout, candidate):
 			continue
 		_add(layout, candidate, false)
 		layout.unreachable.append(candidate)
-		# Sometimes a second one close by, so they read as a small unreachable area.
-		if rng.randf() < 0.4:
-			var y2: float = y - floorf(rng.randf_range(24.0, 56.0))
-			var x2: float = roundf(float(candidate["x"]) + rng.randf_range(-72.0, 72.0))
-			var friend: Dictionary = _new_platform(rng, x2, y2, _random_width(rng, y2, layout.height),
-				layout.height, "unreachable")
-			if _fits(layout, friend) and not _could_be_reached(layout, friend):
-				_add(layout, friend, false)
-				layout.unreachable.append(friend)
 
 
 ## True if any platform except other unreachable ones could get onto `platform`, even with a dash.
 static func _could_be_reached(layout: Layout, platform: Dictionary) -> bool:
 	var jump: Jump = layout.jump
-	var below: float = jump.height + jump.double_jump_height + UNREACHABLE_MARGIN
+	var below: float = highest_ever(jump) + UNREACHABLE_MARGIN
 	for other: Dictionary in _nearby(layout, float(platform["y"]), below, DROP_LIMIT + UNREACHABLE_MARGIN):
 		if other["kind"] != "unreachable" and could_ever_reach(other, platform, jump):
 			return true
@@ -604,10 +734,20 @@ static func _build_extras(layout: Layout, rng: RandomNumberGenerator, density: f
 	for attempt: int in wanted * 8:
 		if placed >= wanted:
 			return
-		# Spread evenly over the climb: pick a height, then a reachable platform near it.
-		var bases: Array[Dictionary] = _reachable_near(layout, rng.randf_range(0.0, layout.height), 80.0)
+		# Fill the emptiest stretches first: of a few random heights, take the one with the fewest platforms
+		# around it, then a reachable platform near it.
+		var at: float = rng.randf_range(0.0, layout.height)
+		var fewest: int = _nearby(layout, -at, 90.0, 90.0).size()
+		for other_try: int in 2:
+			var other_at: float = rng.randf_range(0.0, layout.height)
+			var count: int = _nearby(layout, -other_at, 90.0, 90.0).size()
+			if count < fewest:
+				at = other_at
+				fewest = count
+		var bases: Array[Dictionary] = _reachable_near(layout, at, 80.0)
 		var base: Dictionary = layout.reachable[0] if bases.is_empty() else bases[rng.randi() % bases.size()]
-		var rise: float = floorf(rng.randf_range(-16.0, max_rise(Move.SINGLE_JUMP, jump)))
+		# Mostly sideways: extras give choices, not a ladder that skips the route's double-jump steps.
+		var rise: float = floorf(rng.randf_range(-24.0, SINGLE_STEP_MIN))
 		var gap: float = rng.randf_range(MIN_GAP_X, maxf(MIN_GAP_X, max_edge_gap(rise, jump)))
 		var y: float = float(base["y"]) - rise
 		var width: int = _random_width(rng, y, layout.height)
@@ -658,17 +798,26 @@ static func _place_dash_treats(layout: Layout, rng: RandomNumberGenerator, slots
 	return left
 
 
-## The other treats: on the route (sometimes), else on a nearby dead end, else a new dash ledge, else the route.
+## The other treats: on the route (sometimes), else on an upward-dash ledge over a dead end (while the level
+## has few upward ones), else on a nearby dead end, else a new dash ledge, else the route.
 static func _place_other_treats(layout: Layout, rng: RandomNumberGenerator, slots: Array[Vector2]) -> void:
 	var route: Array[Dictionary] = layout.main.slice(0, layout.main.size() - 1)  # not the moon platform
 	for slot: Vector2 in slots:
 		var spot: Dictionary = {}
 		if slot.y < MAIN_TREAT_CHANCE:
 			spot = _nearest(layout, route, slot.x, 1000.0)
+		if spot.is_empty() and layout.up_dash_ledges.size() < MIN_UP_DASH_LEDGES:
+			spot = _try_ledge_over_dead_end(layout, rng, slot.x)
 		if spot.is_empty():
 			spot = _nearest(layout, layout.dead_ends, slot.x, TREAT_SPACING.x * 0.5)
 		if spot.is_empty():
 			spot = _try_dash_ledge(layout, rng, slot.x)
+		if spot.is_empty():  # any other platform off the route (fork, dead end, stepping stone)
+			var off_route: Array[Dictionary] = []
+			for platform: Dictionary in layout.reachable:
+				if platform["kind"] != "main" and platform["kind"] != "floor":
+					off_route.append(platform)
+			spot = _nearest(layout, off_route, slot.x, TREAT_SPACING.x * 0.8)
 		if spot.is_empty():
 			spot = _nearest(layout, route, slot.x, 1000.0)
 		if not spot.is_empty():
@@ -691,19 +840,75 @@ static func _nearest(layout: Layout, candidates: Array[Dictionary], at: float, w
 	return best
 
 
+## How far above its base a dash-only ledge of each kind usually is (so bases can be picked to put the ledge
+## near a wanted height).
+static func _typical_dash_rise(jump: Jump, upward: bool) -> float:
+	if upward:
+		return (jump.height + jump.double_jump_height + max_dash_rise(DASH_UP, jump)) / 2.0
+	return 30.0
+
+
+## Tries to add an upward-dash ledge above the tip of a dead end near height `at`: a dead end that isn't one
+## if you still have a dash. Upward ledges are easiest to fit there, away from the route.
+static func _try_ledge_over_dead_end(layout: Layout, rng: RandomNumberGenerator, at: float) -> Dictionary:
+	if layout.jump.dash_distance <= 0.0:
+		return {}
+	var base_at: float = at - _typical_dash_rise(layout.jump, true)
+	var tips: Array[Dictionary] = []
+	for tip: Dictionary in layout.dead_ends:
+		if absf(-float(tip["y"]) - base_at) <= TREAT_SPACING.x * 0.5:
+			tips.append(tip)
+	if tips.is_empty():
+		return {}
+	return _try_dash_ledge_kind(layout, rng, at, true, tips)
+
+
 ## Tries to add a small ledge near height `at` that is reachable only with a dash from a reachable platform.
 static func _try_dash_ledge(layout: Layout, rng: RandomNumberGenerator, at: float) -> Dictionary:
 	var jump: Jump = layout.jump
 	if jump.dash_distance <= 0.0:
 		return {}
-	var bases: Array[Dictionary] = _reachable_near(layout, at, 160.0)
+	# Mix the two kinds: usually a coin flip, but a level that has only one kind so far gets the other.
+	var ups: int = layout.up_dash_ledges.size()
+	var sides: int = layout.dash_ledges.size() - ups
+	var upward: bool = rng.randf() < UP_DASH_LEDGE_CHANCE
+	if ups != sides and mini(ups, sides) == 0:
+		upward = ups == 0
+	var ledge: Dictionary = _try_dash_ledge_kind(layout, rng, at, upward)
+	if ledge.is_empty():
+		ledge = _try_dash_ledge_kind(layout, rng, at, not upward)
+	return ledge
+
+
+## Tries to add a dash-only ledge near height `at` that needs an upward/diagonal dash (`upward`) or a
+## sideways one, from one of `bases` (default: reachable platforms at a fitting height).
+static func _try_dash_ledge_kind(layout: Layout, rng: RandomNumberGenerator, at: float, upward: bool,
+		bases: Array[Dictionary] = []) -> Dictionary:
+	var jump: Jump = layout.jump
+	if bases.is_empty():
+		bases = _reachable_near(layout, at - _typical_dash_rise(jump, upward), 140.0)
 	if bases.is_empty():
 		return {}
-	for attempt: int in 80:
+	for attempt: int in DASH_LEDGE_TRIES:
 		var base: Dictionary = bases[rng.randi() % bases.size()]
-		var rise: float = floorf(rng.randf_range(-24.0, 80.0))
-		var low: float = max_double_jump_gap(rise, jump) + DASH_ONLY_MARGIN
-		var high: float = max_dash_gap(rise, jump)
+		var direction: Vector2 = DASH_SIDE
+		var rise: float
+		var low: float
+		var high: float
+		if upward:
+			# Higher than any jump + double jump can get (real heights, not safety-reduced) plus the margin.
+			direction = DASH_UP if rng.randf() < 0.5 else DASH_DIAGONAL
+			var lowest_rise: float = jump.height + jump.double_jump_height + DASH_ONLY_MARGIN
+			var highest_rise: float = max_dash_rise(direction, jump)
+			if lowest_rise >= highest_rise:
+				continue
+			rise = floorf(rng.randf_range(lowest_rise, highest_rise))
+			low = -TILE  # one-way platforms: the dog can dash up through one that hangs right overhead
+			high = max_dash_gap(rise, jump, direction)
+		else:
+			rise = floorf(rng.randf_range(-24.0, 80.0))
+			low = max_double_jump_gap(rise, jump) + DASH_ONLY_MARGIN
+			high = max_dash_gap(rise, jump, direction)
 		if low >= high:
 			continue
 		var width: int = rng.randi_range(2, 3)
@@ -712,26 +917,48 @@ static func _try_dash_ledge(layout: Layout, rng: RandomNumberGenerator, at: floa
 		var x: float = roundf(float(base["x"]) + side * (gap + (int(base["width"]) + width) * TILE / 2.0))
 		var y: float = float(base["y"]) - rise
 		var candidate: Dictionary = _new_platform(rng, x, y, width, layout.height, "dash")
-		if not can_reach(base, candidate, jump, Move.DASH) or not _fits(layout, candidate):
+		if not can_dash_to(base, candidate, jump, direction) or not _fits(layout, candidate):
 			continue
 		if _touches_unreachable(layout, candidate) or _reached_without_dash(layout, candidate):
 			continue
+		if upward and _reached_by_side_dash(layout, candidate):
+			continue
 		_add(layout, candidate, false)
 		layout.dash_ledges.append(candidate)
+		if upward:
+			layout.up_dash_ledges.append(candidate)
 		return candidate
 	return {}
 
 
 ## True if a new reachable platform would make an unreachable platform reachable, let the player onto a
-## dash-only ledge without the dash, or give a dead end a way up.
+## dash-only ledge without the dash (or onto an upward-dash ledge with a sideways dash), or give a dead end
+## a way up.
 static func _spoils_secrets(layout: Layout, platform: Dictionary) -> bool:
-	return _touches_unreachable(layout, platform) or _reaches_dash_ledge(layout, platform) 		or _blocks_dead_end(layout, platform)
+	return _touches_unreachable(layout, platform) or _reaches_dash_ledge(layout, platform) \
+		or _blocks_dead_end(layout, platform)
 
 
-## True if a new reachable platform would let the player onto a dash-only ledge without the dash.
+## True if a new reachable platform would let the player onto a dash-only ledge without the dash, or onto an
+## upward-dash ledge with just a sideways dash.
 static func _reaches_dash_ledge(layout: Layout, platform: Dictionary) -> bool:
 	for ledge: Dictionary in layout.dash_ledges:
 		if can_reach(platform, ledge, layout.jump, Move.DOUBLE_JUMP, DASH_ONLY_MARGIN):
+			return true
+	for ledge: Dictionary in layout.up_dash_ledges:
+		if can_dash_to(platform, ledge, layout.jump, DASH_SIDE, DASH_ONLY_MARGIN):
+			return true
+	return false
+
+
+## True if a sideways dash from any platform you can climb to gets onto `platform` (with DASH_ONLY_MARGIN).
+static func _reached_by_side_dash(layout: Layout, platform: Dictionary) -> bool:
+	var jump: Jump = layout.jump
+	var below: float = max_dash_rise(DASH_SIDE, jump) + DASH_ONLY_MARGIN
+	for other: Dictionary in _nearby(layout, float(platform["y"]), below, DROP_LIMIT + DASH_ONLY_MARGIN):
+		if other["kind"] == "unreachable" or other["kind"] == "dash":
+			continue
+		if can_dash_to(other, platform, jump, DASH_SIDE, DASH_ONLY_MARGIN):
 			return true
 	return false
 
