@@ -14,6 +14,9 @@ func _ready() -> void:
 	if player:
 		player.jumped.connect(Sound.play.bind(&"jump"))
 		player.landed.connect(Sound.play.bind(&"land"))
+		player.double_jumped.connect(Sound.play.bind(&"double_jump"))
+		player.dashed.connect(Sound.play.bind(&"dash"))
+		player.dash_refilled.connect(Sound.play.bind(&"treat"))
 	if director:
 		director.countdown_changed.connect(_on_countdown_changed)
 		director.lifted_off.connect(_on_lifted_off)

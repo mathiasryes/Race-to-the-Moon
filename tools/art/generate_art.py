@@ -747,6 +747,61 @@ def make_sky_props() -> None:
     save(outline(img), "props/hot_air_balloon.png")
 
 
+# ---------------------------------------------------------------- pickups and UI
+
+def draw_treat(shine: int) -> Image.Image:
+    """14x10 dog biscuit (bone shape). shine: 0 = plain, 1-2 = a glint sliding across, 3 = sparkle."""
+    img = new(14, 10)
+    body, shade, light = P["tan"], P["brown"], P["cream"]
+    rect(img, 3, 3, 10, 6, body)  # shaft
+    for kx in (2.5, 11.5):  # two round knobs at each end, with a notch between them
+        for ky in (2.5, 7.5):
+            ellipse(img, kx, ky, 1.6, 1.6, body)
+    for y in range(10):
+        for x in range(14):
+            if img.getpixel((x, y)) != body:
+                continue
+            below, right = get(img, x, y + 1)[3] == 0, get(img, x + 1, y)[3] == 0
+            above, left = get(img, x, y - 1)[3] == 0, get(img, x - 1, y)[3] == 0
+            if below or (right and y >= 5):
+                put(img, x, y, shade)  # light from the top-left: shade the bottom/right edge
+            elif above or left:
+                put(img, x, y, light)
+    for x, y in ((5, 5), (8, 4)):  # baked-in dots
+        put(img, x, y, P["brown"])
+    glints = {1: [(4, 3), (5, 4)], 2: [(8, 3), (9, 4)]}
+    for x, y in glints.get(shine, []):
+        put(img, x, y, P["white"])
+    img = outline(img)
+    if shine == 3:  # little star on the top-right knob
+        for x, y in ((12, 0), (11, 1), (13, 1), (12, 2)):
+            put(img, x, y, P["yellow"])
+        put(img, 12, 1, P["white"])
+    return img
+
+
+def draw_paw(full: bool) -> Image.Image:
+    """12x12 paw print for the dash HUD. full = dash ready, otherwise a dim used-up version."""
+    img = new(12, 12)
+    main, shade, light = (P["gold"], P["orange"], P["yellow"]) if full else (P["dgrey"], P["ddgrey"], P["grey"])
+    rect(img, 4, 7, 7, 10, main)  # big pad
+    rect(img, 3, 8, 8, 9, main)
+    for x0, y0 in ((1, 4), (3, 1), (7, 1), (9, 4)):  # four 2x2 toes
+        rect(img, x0, y0, x0 + 1, y0 + 1, main)
+        put(img, x0, y0, light)
+        put(img, x0 + 1, y0 + 1, shade)
+    rect(img, 4, 7, 5, 7, light)
+    rect(img, 7, 10, 7, 10, shade)
+    rect(img, 8, 9, 8, 9, shade)
+    rect(img, 5, 10, 6, 10, shade)
+    return outline(img, P["outline"] if full else P["ddgrey"])
+
+
+def make_pickups_and_ui() -> None:
+    save(sheet([draw_treat(s) for s in range(4)]), "pickups/treat.png")
+    save(sheet([draw_paw(True), draw_paw(False)]), "ui/dash_icon.png")
+
+
 # ---------------------------------------------------------------- previews
 
 def tile(zone: str, col: int) -> Image.Image:
@@ -840,6 +895,13 @@ def mockups() -> Image.Image:
     platform(c, "moon", 300, 160, 4)
     paste(c, frame("player/dog.png", 0, 24), 330, 160 - 24 + 2)
 
+    # treats to pick up, and the dash indicator in the top-left corner (full, then used up, then refilled)
+    paste(a, frame("pickups/treat.png", 0, 14), 245, 226)
+    paste(b, frame("pickups/treat.png", 3, 14), 145, 148)
+    paste(c, frame("pickups/treat.png", 1, 14), 255, 238)
+    for i, im in enumerate((a, b, c)):
+        paste(im, frame("ui/dash_icon.png", 1 if i == 1 else 0, 12), 8, 8)
+
     out = new(640, 360 * 3 + 8)
     for i, im in enumerate((c, b, a)):
         out.paste(im, (0, i * 364))
@@ -895,6 +957,7 @@ def main() -> None:
     make_moon()
     make_space_props()
     make_sky_props()
+    make_pickups_and_ui()
     PREVIEW.mkdir(parents=True, exist_ok=True)
     mockups().save(PREVIEW / "mockups.png")
     asset_sheet().save(PREVIEW / "asset-sheet.png")

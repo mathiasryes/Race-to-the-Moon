@@ -24,3 +24,14 @@ func test_missing_files_are_skipped() -> void:
 func test_names_are_unique_across_lists() -> void:
 	for sound: StringName in SoundScript.SFX:
 		assert_false(SoundScript.LOOPS.has(sound) or SoundScript.MUSIC.has(sound), "%s is in two lists" % sound)
+
+
+func test_dash_and_treat_sounds_are_known() -> void:
+	for sound: StringName in [&"dash", &"double_jump", &"treat"]:
+		assert_true(SoundScript.SFX.has(sound), "%s should be a one-shot effect" % sound)
+
+
+func test_dash_and_treat_placeholders_exist() -> void:
+	for sound: StringName in [&"dash", &"double_jump", &"treat"]:
+		assert_true(SoundScript.path_for("sfx", sound).ends_with("assets/audio/sfx/%s.wav" % sound),
+			"%s placeholder should be found, got '%s'" % [sound, SoundScript.path_for("sfx", sound)])
